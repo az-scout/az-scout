@@ -35,6 +35,7 @@ packages = ["src/az_scout_example"]
 
 [tool.hatch.version]
 source = "vcs"
+raw-options.version_scheme = "guess-next-dev"
 raw-options.local_scheme = "no-local-version"
 
 [tool.hatch.build.hooks.vcs]
@@ -43,7 +44,7 @@ version-file = "src/az_scout_example/_version.py"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-exclude = ["src/az_scout_latency_stats/_version.py"]
+exclude = ["src/az_scout_example/_version.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B", "SIM"]

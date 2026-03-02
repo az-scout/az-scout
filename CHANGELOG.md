@@ -6,37 +6,56 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
 
-## [Unreleased]
+## [2026.3.1] - 2026-03-02
 
 ### Added
 
-- **Plugin persistence in containers** – plugins installed via the Plugin Manager now survive
-  container restarts and scale-to-zero events (fixes #64). At startup the app reconciles
-  `installed.json` against the plugin venv and automatically reinstalls any missing plugins from
-  their pinned commit SHA.
-- **Bicep `enablePluginStorage` parameter** – when enabled, deploys an Azure Storage Account with an
-  Azure Files share mounted into the Container App for durable plugin data.
-- **Dockerfile sets `AZ_SCOUT_DATA_DIR`** – the container image now defaults to `/app/data` with a
-  declared `VOLUME`, ready for persistent volume mounts.
+- **PyPI as plugin source** – the Plugin Manager now supports installing plugins from PyPI in
+  addition to GitHub repos. Version auto-resolves to the latest release when not specified (#70).
+- **In-process hot-reload for plugins** – installing, updating, or uninstalling a plugin no longer
+  requires a server restart. Routes, MCP tools, static assets, and chat modes are reloaded
+  automatically (#69).
+- **Diagnostic logging for `azure_api`** – debug-level log statements across auth, pagination,
+  discovery, SKUs, pricing, quotas, and spot modules for easier troubleshooting (#68).
+- **Unified logging format** – all log output (core, plugins, uvicorn, MCP, httpx) now uses a
+  single coloured format with a `[category]` tag: `[core]`, `[plugin:<name>]`, `[server]`,
+  `[mcp]`, `[http]`. Added `get_plugin_logger()` helper in `plugin_api` for plugin authors (#72).
+- **Playwright E2E test suite** – browser-based integration tests for topology, planner, and
+  bootstrap workflows (#51).
+- **Plugin Manager: update support** – installed plugins can be updated to a newer version
+  from the UI (#54).
+- **`/api/locations` endpoint** – list Azure locations for a subscription (#55).
+
+### Removed
+
+- **Admission Intelligence** – removed the experimental composite heuristic scoring system
+  (6 signals, SQLite time-series store, ~2,700 lines). The feature was never production-validated
+  and added significant complexity without delivering reliable results (#66).
 
 ### Fixed
 
-- **Unified plugin venv path** – `plugins.py` now uses the same `AZ_SCOUT_DATA_DIR`-aware path as
-  `plugin_manager.py` instead of a hardcoded relative `.venv-plugins`, fixing a mismatch where the
-  two modules could look at different directories.
+- **Plugin persistence in containers** – plugins installed via the Plugin Manager now survive
+  container restarts and scale-to-zero events (#65).
+- **Plugin install 500 error** – fixed crash when `uv` is absent in container environments (#63).
+- **Plugin manager PermissionError** – fixed file permission issues in container mode (#59).
+- **Verbose logging (`-v`) actually works** – fixed bug where `--reload` mode ignored the verbose
+  flag (env var `AZ_SCOUT_LOG_LEVEL` now propagates to reload workers). Uvicorn `log_level` is
+  now `debug` (was `info`) when verbose (#72).
+- **Version scheme for container builds** – switched from `calver-by-date` to `guess-next-dev` to
+  support the `YYYY.M.MICRO` tag format (#72).
 
 ### Changed
 
 - **Latency Stats extracted to plugin** – the inter-region latency dataset and MCP tool are no longer
   bundled in the core application. They are now available as a standalone plugin:
   [`az-scout-plugin-latency-stats`](https://github.com/lrivallain/az-scout-plugin-latency-stats).
-  The plugin adds a pairwise latency matrix API, an interactive D3.js graph visualisation, and the
-  `region_latency` MCP tool. Install the plugin to restore latency functionality.
 - **Strategy Advisor extracted to plugin** – the Capacity Strategy Advisor is no longer bundled in
   the core application. It is now available as a standalone plugin:
   [`az-scout-plugin-strategy-advisor`](https://github.com/lrivallain/az-scout-plugin-strategy-advisor).
-  Install the plugin to restore Strategy Advisor functionality (API route, MCP tool, UI tab).
-- Use calver in the plugin scaffold structure
+- Use calver in the plugin scaffold structure.
+- Plugin Manager UI: validate/install/uninstall from GitHub repos (#50).
+
+## [Unreleased]
 
 ## [2026.2.8] - 2026-02-28
 
