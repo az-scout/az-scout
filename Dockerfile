@@ -39,11 +39,11 @@ RUN pip install --no-cache-dir /tmp/*.whl && rm /tmp/*.whl
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # Plugin data directory.
-# In container deployments, mount a persistent volume at /app/data so that
-# installed.json (plugin registry) and plugin-packages survive restarts.
-# At startup the app reconciles: plugins listed in installed.json but missing
-# from the packages directory are automatically reinstalled from their pinned
-# commit SHA.
+# Mount a persistent volume at /app/data so that installed.json (plugin
+# registry) and audit.jsonl survive restarts.  Plugin packages and the uv
+# cache live on the local filesystem (/tmp) because Azure Files (SMB) does
+# not support chmod/hardlinks.  On restart the reconcile loop reinstalls
+# every plugin from its pinned commit SHA recorded in installed.json.
 ENV AZ_SCOUT_DATA_DIR=/app/data
 RUN mkdir -p /app/data && chown scout:scout /app/data
 VOLUME /app/data

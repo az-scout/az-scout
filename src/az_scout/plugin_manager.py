@@ -55,9 +55,12 @@ def _default_data_dir() -> Path:
 _DATA_DIR = _default_data_dir() / "plugins"
 _INSTALLED_FILE = _DATA_DIR / "installed.json"
 _AUDIT_FILE = _DATA_DIR / "audit.jsonl"
-_PACKAGES_DIR = _default_data_dir() / "plugin-packages"
-# UV cache must live on a local filesystem — Azure Files (SMB) does not
-# support chmod/symlinks which breaks git operations inside the cache.
+# Both the packages directory and the uv cache live on a local filesystem.
+# Azure Files (SMB) does not support chmod / hardlinks which breaks uv copy
+# and git operations.  The packages directory is ephemeral — on restart the
+# reconcile loop reinstalls everything from installed.json (which stays on
+# the durable volume).
+_PACKAGES_DIR = Path(tempfile.gettempdir()) / "az-scout-packages"
 _UV_CACHE_DIR = Path(tempfile.gettempdir()) / "az-scout-uv-cache"
 
 
@@ -294,6 +297,7 @@ def _pip_env() -> dict[str, str]:
     """Return an environment dict for pip/uv subprocess calls."""
     env = os.environ.copy()
     env["UV_CACHE_DIR"] = str(_UV_CACHE_DIR)
+    env["UV_LINK_MODE"] = "copy"
     return env
 
 
@@ -882,11 +886,12 @@ def _is_plugin_installed(distribution_name: str) -> bool:
 def reconcile_installed_plugins() -> list[dict[str, str | bool]]:
     """Re-install plugins listed in ``installed.json`` but missing from packages.
 
-    This is the "self-healing" step called at startup.  When the container is
-    ephemeral but ``installed.json`` lives on a durable volume, the packages
-    directory may be empty after a scale-to-zero restart.  For each missing
-    plugin the function runs ``pip install --target`` using the exact pinned
-    SHA so the build is reproducible.
+    This is the "self-healing" step called at startup.  The packages
+    directory lives on the local filesystem (ephemeral) while
+    ``installed.json`` is on the durable volume, so after any restart the
+    packages directory is empty.  For each missing plugin the function runs
+    ``pip install --target`` using the exact pinned SHA so the build is
+    reproducible.
 
     Returns a list of per-plugin dicts with keys ``distribution_name``,
     ``reinstalled`` (bool), and ``error`` (str, empty on success).
