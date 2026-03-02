@@ -291,31 +291,21 @@ def _find_uv() -> str | None:
 def ensure_plugins_venv() -> Path:
     """Create the ``.venv-plugins`` virtual environment if it does not exist.
 
-    Uses ``uv venv`` when ``uv`` is available, otherwise falls back to the
-    standard library ``venv`` module.
+    Always uses ``python -m venv --copies`` so the Python interpreter is a real
+    file, not a symlink.  This is required when the venv lives on an Azure Files
+    (SMB) mount which does not support symbolic links.  Package management still
+    uses ``uv pip`` when ``uv`` is available.
 
     Returns the path to the venv directory.
     """
     if not _VENV_DIR.exists():
         logger.info("Creating plugin venv at %s", _VENV_DIR)
-        uv = _find_uv()
         try:
-            if uv:
-                env = os.environ.copy()
-                env["UV_CACHE_DIR"] = str(_UV_CACHE_DIR)
-                subprocess.run(  # noqa: S603
-                    [uv, "venv", "--relocatable", str(_VENV_DIR)],
-                    check=True,
-                    capture_output=True,
-                    env=env,
-                )
-            else:
-                logger.warning("uv not found; falling back to python -m venv")
-                subprocess.run(  # noqa: S603
-                    [sys.executable, "-m", "venv", str(_VENV_DIR)],
-                    check=True,
-                    capture_output=True,
-                )
+            subprocess.run(  # noqa: S603
+                [sys.executable, "-m", "venv", "--copies", str(_VENV_DIR)],
+                check=True,
+                capture_output=True,
+            )
         except subprocess.CalledProcessError as exc:
             stderr = exc.stderr.decode() if isinstance(exc.stderr, bytes) else (exc.stderr or "")
             logger.error("Failed to create plugin venv: %s", stderr)

@@ -896,31 +896,13 @@ class TestUpdateRoutes:
 
 
 class TestEnsurePluginsVenvFallback:
-    def test_creates_venv_with_uv(self, tmp_path: Path) -> None:
-        """When uv is available, ensure_plugins_venv uses it."""
+    def test_creates_venv_with_copies(self, tmp_path: Path) -> None:
+        """ensure_plugins_venv always uses python -m venv --copies (SMB safe)."""
         venv_dir = tmp_path / ".venv-plugins"
         mock_proc = MagicMock()
 
         with (
             patch.object(plugin_manager, "_VENV_DIR", venv_dir),
-            patch("az_scout.plugin_manager._find_uv", return_value="/usr/bin/uv"),
-            patch("az_scout.plugin_manager.subprocess.run", return_value=mock_proc) as mock_run,
-        ):
-            result = plugin_manager.ensure_plugins_venv()
-
-        assert result == venv_dir
-        cmd = mock_run.call_args[0][0]
-        assert cmd[0] == "/usr/bin/uv"
-        assert "venv" in cmd
-
-    def test_creates_venv_with_stdlib_fallback(self, tmp_path: Path) -> None:
-        """When uv is not available, ensure_plugins_venv falls back to python -m venv."""
-        venv_dir = tmp_path / ".venv-plugins"
-        mock_proc = MagicMock()
-
-        with (
-            patch.object(plugin_manager, "_VENV_DIR", venv_dir),
-            patch("az_scout.plugin_manager._find_uv", return_value=None),
             patch("az_scout.plugin_manager.subprocess.run", return_value=mock_proc) as mock_run,
         ):
             result = plugin_manager.ensure_plugins_venv()
@@ -930,6 +912,25 @@ class TestEnsurePluginsVenvFallback:
         assert cmd[0] == sys.executable
         assert "-m" in cmd
         assert "venv" in cmd
+        assert "--copies" in cmd
+
+    def test_creates_venv_with_stdlib_fallback(self, tmp_path: Path) -> None:
+        """ensure_plugins_venv uses python -m venv --copies (no uv dependency)."""
+        venv_dir = tmp_path / ".venv-plugins"
+        mock_proc = MagicMock()
+
+        with (
+            patch.object(plugin_manager, "_VENV_DIR", venv_dir),
+            patch("az_scout.plugin_manager.subprocess.run", return_value=mock_proc) as mock_run,
+        ):
+            result = plugin_manager.ensure_plugins_venv()
+
+        assert result == venv_dir
+        cmd = mock_run.call_args[0][0]
+        assert cmd[0] == sys.executable
+        assert "-m" in cmd
+        assert "venv" in cmd
+        assert "--copies" in cmd
 
     def test_skips_creation_if_venv_exists(self, tmp_path: Path) -> None:
         """If the venv directory already exists, no subprocess is called."""
