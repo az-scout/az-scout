@@ -933,9 +933,13 @@ class TestEnsurePluginsVenvFallback:
         assert "--copies" in cmd
 
     def test_skips_creation_if_venv_exists(self, tmp_path: Path) -> None:
-        """If the venv directory already exists, no subprocess is called."""
+        """If the venv directory already exists with a healthy interpreter, skip."""
         venv_dir = tmp_path / ".venv-plugins"
         venv_dir.mkdir()
+        # Create a fake python3 binary so the health check passes
+        bin_dir = venv_dir / "bin"
+        bin_dir.mkdir()
+        (bin_dir / "python3").touch()
 
         with (
             patch.object(plugin_manager, "_VENV_DIR", venv_dir),
@@ -946,12 +950,33 @@ class TestEnsurePluginsVenvFallback:
         assert result == venv_dir
         mock_run.assert_not_called()
 
+    def test_recreates_broken_venv(self, tmp_path: Path) -> None:
+        """If the venv directory exists but the interpreter is missing, recreate."""
+        venv_dir = tmp_path / ".venv-plugins"
+        venv_dir.mkdir()
+        # No python3 binary → broken venv
+        mock_proc = MagicMock()
+
+        with (
+            patch.object(plugin_manager, "_VENV_DIR", venv_dir),
+            patch("az_scout.plugin_manager.subprocess.run", return_value=mock_proc) as mock_run,
+        ):
+            result = plugin_manager.ensure_plugins_venv()
+
+        assert result == venv_dir
+        # Should have called subprocess.run to recreate
+        mock_run.assert_called_once()
+        cmd = mock_run.call_args[0][0]
+        assert cmd[0] == sys.executable
+        assert "--copies" in cmd
+
 
 class TestRunUvInVenvFallback:
     def test_uses_uv_when_available(self, tmp_path: Path) -> None:
         """When uv is found, run_uv_in_venv builds command with uv."""
         venv_dir = tmp_path / ".venv-plugins"
-        venv_dir.mkdir()
+        (venv_dir / "bin").mkdir(parents=True)
+        (venv_dir / "bin" / "python3").touch()
         mock_proc = MagicMock()
         mock_proc.returncode = 0
 
@@ -971,6 +996,7 @@ class TestRunUvInVenvFallback:
         """When uv is not found, run_uv_in_venv delegates to venv pip."""
         venv_dir = tmp_path / ".venv-plugins"
         (venv_dir / "bin").mkdir(parents=True)
+        (venv_dir / "bin" / "python3").touch()
         mock_proc = MagicMock()
         mock_proc.returncode = 0
 
@@ -990,6 +1016,7 @@ class TestRunUvInVenvFallback:
         """Fallback pip uninstall automatically adds -y for non-interactive mode."""
         venv_dir = tmp_path / ".venv-plugins"
         (venv_dir / "bin").mkdir(parents=True)
+        (venv_dir / "bin" / "python3").touch()
         mock_proc = MagicMock()
         mock_proc.returncode = 0
 

@@ -288,6 +288,25 @@ def _find_uv() -> str | None:
     return shutil.which("uv")
 
 
+def _venv_python(venv_path: Path) -> Path:
+    """Return the expected path to the Python interpreter inside a venv."""
+    bin_dir = "Scripts" if platform.system() == "Windows" else "bin"
+    name = "python.exe" if platform.system() == "Windows" else "python3"
+    return venv_path / bin_dir / name
+
+
+def _is_venv_healthy(venv_path: Path) -> bool:
+    """Check whether an existing venv has a usable Python interpreter.
+
+    Returns ``False`` when the directory exists but the interpreter is missing
+    (e.g. a broken symlink left over from a previous ``uv venv`` on an SMB
+    mount that does not support symbolic links).
+    """
+    python = _venv_python(venv_path)
+    # Path.exists() follows symlinks — returns False for dangling symlinks.
+    return python.exists()
+
+
 def ensure_plugins_venv() -> Path:
     """Create the ``.venv-plugins`` virtual environment if it does not exist.
 
@@ -296,8 +315,19 @@ def ensure_plugins_venv() -> Path:
     (SMB) mount which does not support symbolic links.  Package management still
     uses ``uv pip`` when ``uv`` is available.
 
+    If the directory exists but the Python interpreter is missing or broken
+    (e.g. dangling symlink from a previous attempt), the venv is deleted and
+    recreated.
+
     Returns the path to the venv directory.
     """
+    if _VENV_DIR.exists() and not _is_venv_healthy(_VENV_DIR):
+        logger.warning(
+            "Plugin venv at %s is broken (Python interpreter missing) — recreating",
+            _VENV_DIR,
+        )
+        shutil.rmtree(_VENV_DIR, ignore_errors=True)
+
     if not _VENV_DIR.exists():
         logger.info("Creating plugin venv at %s", _VENV_DIR)
         try:
