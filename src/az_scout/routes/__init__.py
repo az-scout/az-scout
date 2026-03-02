@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from az_scout import plugin_manager
-from az_scout.plugins import get_loaded_plugins
+from az_scout.plugins import get_loaded_plugins, reload_plugins
 
 router = APIRouter(prefix="/api/plugins", tags=["Plugin Manager"])
 
@@ -84,10 +84,11 @@ async def install_plugin(body: InstallRequest, request: Request) -> JSONResponse
         client_ip,
         user_agent,
     )
+    if ok:
+        reload_plugins(request.app, request.app.state.mcp_server)
     return JSONResponse(
         {
             "ok": ok,
-            "restart_required": ok,
             "warnings": warnings,
             "errors": errors,
         },
@@ -104,10 +105,11 @@ async def uninstall_plugin(body: UninstallRequest, request: Request) -> JSONResp
         client_ip,
         user_agent,
     )
+    if ok:
+        reload_plugins(request.app, request.app.state.mcp_server)
     return JSONResponse(
         {
             "ok": ok,
-            "restart_required": ok,
             "errors": errors,
         },
     )
@@ -131,10 +133,11 @@ async def update_plugin(body: UpdateRequest, request: Request) -> JSONResponse:
         client_ip,
         user_agent,
     )
+    if ok:
+        reload_plugins(request.app, request.app.state.mcp_server)
     return JSONResponse(
         {
             "ok": ok,
-            "restart_required": ok,
             "errors": errors,
         },
     )
@@ -149,10 +152,11 @@ async def update_all_plugins(request: Request) -> JSONResponse:
         client_ip,
         user_agent,
     )
+    if updated > 0:
+        reload_plugins(request.app, request.app.state.mcp_server)
     return JSONResponse(
         {
             "ok": failed == 0,
-            "restart_required": updated > 0,
             "updated": updated,
             "failed": failed,
             "details": details,

@@ -305,9 +305,12 @@ class TestPluginRoutes:
         assert len(data["errors"]) > 0
 
     def test_install_success(self, client) -> None:  # type: ignore[no-untyped-def]
-        with patch(
-            "az_scout.routes.plugin_manager.install_plugin",
-            return_value=(True, [], []),
+        with (
+            patch(
+                "az_scout.routes.plugin_manager.install_plugin",
+                return_value=(True, [], []),
+            ),
+            patch("az_scout.routes.reload_plugins"),
         ):
             resp = client.post(
                 "/api/plugins/install",
@@ -317,7 +320,6 @@ class TestPluginRoutes:
         assert resp.status_code == 200
         data = resp.json()
         assert data["ok"] is True
-        assert data["restart_required"] is True
 
     def test_install_failure(self, client) -> None:  # type: ignore[no-untyped-def]
         with patch(
@@ -335,9 +337,12 @@ class TestPluginRoutes:
         assert "install failed" in data["errors"]
 
     def test_uninstall_success(self, client) -> None:  # type: ignore[no-untyped-def]
-        with patch(
-            "az_scout.routes.plugin_manager.uninstall_plugin",
-            return_value=(True, []),
+        with (
+            patch(
+                "az_scout.routes.plugin_manager.uninstall_plugin",
+                return_value=(True, []),
+            ),
+            patch("az_scout.routes.reload_plugins"),
         ):
             resp = client.post(
                 "/api/plugins/uninstall",
@@ -347,7 +352,6 @@ class TestPluginRoutes:
         assert resp.status_code == 200
         data = resp.json()
         assert data["ok"] is True
-        assert data["restart_required"] is True
 
     def test_uninstall_failure(self, client) -> None:  # type: ignore[no-untyped-def]
         with patch(
@@ -821,9 +825,12 @@ class TestUpdateRoutes:
         assert data["plugins"][0]["update_available"] is True
 
     def test_update_single_success(self, client) -> None:  # type: ignore[no-untyped-def]
-        with patch(
-            "az_scout.routes.plugin_manager.update_plugin",
-            return_value=(True, []),
+        with (
+            patch(
+                "az_scout.routes.plugin_manager.update_plugin",
+                return_value=(True, []),
+            ),
+            patch("az_scout.routes.reload_plugins"),
         ):
             resp = client.post(
                 "/api/plugins/update",
@@ -833,7 +840,6 @@ class TestUpdateRoutes:
         assert resp.status_code == 200
         data = resp.json()
         assert data["ok"] is True
-        assert data["restart_required"] is True
 
     def test_update_single_failure(self, client) -> None:  # type: ignore[no-untyped-def]
         with patch(
@@ -850,16 +856,19 @@ class TestUpdateRoutes:
         assert data["ok"] is False
 
     def test_update_all(self, client) -> None:  # type: ignore[no-untyped-def]
-        with patch(
-            "az_scout.routes.plugin_manager.update_all_plugins",
-            return_value=(
-                2,
-                0,
-                [
-                    {"distribution_name": "a", "ok": True},
-                    {"distribution_name": "b", "ok": True},
-                ],
+        with (
+            patch(
+                "az_scout.routes.plugin_manager.update_all_plugins",
+                return_value=(
+                    2,
+                    0,
+                    [
+                        {"distribution_name": "a", "ok": True},
+                        {"distribution_name": "b", "ok": True},
+                    ],
+                ),
             ),
+            patch("az_scout.routes.reload_plugins"),
         ):
             resp = client.post("/api/plugins/update-all")
 
@@ -867,7 +876,6 @@ class TestUpdateRoutes:
         data = resp.json()
         assert data["ok"] is True
         assert data["updated"] == 2
-        assert data["restart_required"] is True
 
     def test_update_all_with_failures(self, client) -> None:  # type: ignore[no-untyped-def]
         with patch(

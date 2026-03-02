@@ -50,10 +50,12 @@ _PKG_DIR = Path(__file__).resolve().parent
 @asynccontextmanager
 async def _lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     """Warm the tenant cache, reconcile & register plugins, and start the MCP session manager."""
+    # Store MCP server ref so route handlers can call reload_plugins()
+    _app.state.mcp_server = _mcp_server
     t = threading.Thread(target=azure_api.preload_discovery, daemon=True)
     t.start()
     # Reconcile plugins: reinstall any that are in installed.json but missing
-    # from the venv (e.g. after a container scale-to-zero restart).
+    # from the packages dir (e.g. after a container restart).
     reconcile_installed_plugins()
     # Discover and register plugins (routes, static, MCP tools, chat modes)
     register_plugins(_app, _mcp_server)

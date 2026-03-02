@@ -214,9 +214,8 @@
         try {
             const data = await apiPost("/api/plugins/install", { repo_url: repoUrl, ref: ref });
             if (data.ok) {
-                showRestart();
-                loadPlugins();
-                hideResult();
+                window.location.reload();
+                return;
             } else {
                 showResultError((data.errors || []).join("; "));
             }
@@ -235,8 +234,8 @@
         try {
             const data = await apiPost("/api/plugins/uninstall", { distribution_name: distName });
             if (data.ok) {
-                showRestart();
-                loadPlugins();
+                window.location.reload();
+                return;
             } else {
                 alert("Uninstall failed: " + (data.errors || []).join("; "));
             }
@@ -270,10 +269,8 @@
         try {
             const data = await apiPost("/api/plugins/update", { distribution_name: distName });
             if (data.ok) {
-                showRestart();
-                // Refresh update info
-                delete updateInfo[distName];
-                loadPlugins();
+                window.location.reload();
+                return;
             } else {
                 alert("Update failed: " + (data.errors || []).join("; "));
             }
@@ -292,13 +289,15 @@
         showSpinner("Updating all plugins…");
         try {
             const data = await apiPost("/api/plugins/update-all", {});
-            if (data.restart_required) {
-                showRestart();
+            if (data.updated > 0) {
+                window.location.reload();
+                return;
             }
             updateInfo = {};
             loadPlugins();
-            const msg = "Updated: " + data.updated + ", Failed: " + data.failed;
-            alert(msg);
+            if (data.failed > 0) {
+                alert("Some plugins failed to update: " + data.failed);
+            }
         } catch (e) {
             alert("Update all error: " + e.message);
         } finally {
@@ -391,11 +390,6 @@
     function disableInstall() {
         const btn = document.getElementById("pm-install-btn");
         if (btn) btn.disabled = true;
-    }
-
-    function showRestart() {
-        const el = document.getElementById("pm-restart-banner");
-        if (el) el.classList.remove("d-none");
     }
 
     function escHtml(s) {

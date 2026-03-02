@@ -5,10 +5,16 @@ installed packages that expose an ``az_scout.plugins`` entry point.
 Then :func:`register_plugins` wires up routes, static files, MCP tools,
 and chat modes contributed by each plugin.
 
+After install/uninstall/update, :func:`reload_plugins` performs an
+in-process hot-reload: it tears down old routes, static mounts, MCP tools,
+and chat modes, flushes the Python module cache for plugin packages, then
+re-discovers and re-registers everything.
+
 Plugins may be installed in the main environment or in the dedicated
 ``plugin-packages`` directory managed by the Plugin Manager UI.
 """
 
+import importlib
 import importlib.metadata
 import logging
 import sys
@@ -26,6 +32,8 @@ logger = logging.getLogger(__name__)
 _loaded_plugins: list[AzScoutPlugin] = []
 _plugin_dist_names: dict[str, str] = {}  # plugin.name → pip distribution name
 _plugin_chat_modes: dict[str, ChatMode] = {}
+_plugin_mcp_tool_names: dict[str, list[str]] = {}  # plugin.name → list of MCP tool names
+_plugin_route_prefixes: set[str] = set()  # tracked prefixes for route cleanup
 
 
 def _ensure_plugin_packages_on_path() -> None:
@@ -124,7 +132,9 @@ def _register_one(app: FastAPI, mcp_server: Any, plugin: AzScoutPlugin) -> None:
     try:
         router = plugin.get_router()
         if router is not None:
-            app.include_router(router, prefix=f"/plugins/{name}", tags=[f"Plugin: {name}"])
+            prefix = f"/plugins/{name}"
+            app.include_router(router, prefix=prefix, tags=[f"Plugin: {name}"])
+            _plugin_route_prefixes.add(prefix)
             logger.info("Registered API routes for plugin '%s'", name)
     except Exception:
         logger.exception("Failed to register routes for plugin '%s'", name)
@@ -133,8 +143,9 @@ def _register_one(app: FastAPI, mcp_server: Any, plugin: AzScoutPlugin) -> None:
     try:
         static_dir = plugin.get_static_dir()
         if static_dir is not None:
+            mount_path = f"/plugins/{name}/static"
             app.mount(
-                f"/plugins/{name}/static",
+                mount_path,
                 StaticFiles(directory=str(static_dir)),
                 name=f"plugin-{name}-static",
             )
@@ -146,8 +157,11 @@ def _register_one(app: FastAPI, mcp_server: Any, plugin: AzScoutPlugin) -> None:
     try:
         tools = plugin.get_mcp_tools()
         if tools:
+            tool_names: list[str] = []
             for fn in tools:
                 mcp_server.tool()(fn)
+                tool_names.append(fn.__name__)
+            _plugin_mcp_tool_names[name] = tool_names
             logger.info("Registered %d MCP tool(s) for plugin '%s'", len(tools), name)
     except Exception:
         logger.exception("Failed to register MCP tools for plugin '%s'", name)
@@ -171,6 +185,77 @@ def get_loaded_plugins() -> list[AzScoutPlugin]:
 def get_plugin_chat_modes() -> dict[str, ChatMode]:
     """Return all chat modes contributed by plugins, keyed by mode ID."""
     return dict(_plugin_chat_modes)
+
+
+# ---------------------------------------------------------------------------
+# Hot-reload helpers
+# ---------------------------------------------------------------------------
+
+
+def _unregister_all(app: FastAPI, mcp_server: Any) -> None:
+    """Remove all plugin routes, static mounts, MCP tools, and chat modes."""
+    # Remove FastAPI routes whose path starts with a known plugin prefix
+    prefixes_to_remove = set(_plugin_route_prefixes)
+    # Also remove static mounts at /plugins/*/static
+    for plugin in _loaded_plugins:
+        prefixes_to_remove.add(f"/plugins/{plugin.name}/static")
+
+    if prefixes_to_remove:
+        app.routes[:] = [
+            r
+            for r in app.routes
+            if not any(getattr(r, "path", "").startswith(p) for p in prefixes_to_remove)
+        ]
+        logger.debug("Removed plugin routes for prefixes: %s", prefixes_to_remove)
+
+    # Remove MCP tools
+    for tool_names in _plugin_mcp_tool_names.values():
+        for name in tool_names:
+            try:
+                mcp_server.remove_tool(name)
+                logger.debug("Removed MCP tool '%s'", name)
+            except Exception:
+                logger.debug("MCP tool '%s' already absent", name)
+
+    # Clear registries
+    _loaded_plugins.clear()
+    _plugin_dist_names.clear()
+    _plugin_chat_modes.clear()
+    _plugin_mcp_tool_names.clear()
+    _plugin_route_prefixes.clear()
+
+
+def _flush_plugin_modules() -> None:
+    """Remove plugin-related modules from ``sys.modules`` so reimport picks up new code."""
+    if not _PACKAGES_DIR.exists():
+        return
+    pkg_str = str(_PACKAGES_DIR)
+    stale = [
+        name
+        for name, mod in sys.modules.items()
+        if mod is not None
+        and hasattr(mod, "__file__")
+        and mod.__file__ is not None
+        and mod.__file__.startswith(pkg_str)
+    ]
+    for name in stale:
+        del sys.modules[name]
+    if stale:
+        logger.info("Flushed %d plugin module(s) from sys.modules", len(stale))
+    # Also invalidate importlib caches so fresh distributions are found
+    importlib.invalidate_caches()
+
+
+def reload_plugins(app: FastAPI, mcp_server: Any) -> list[AzScoutPlugin]:
+    """Hot-reload all plugins: tear down, flush caches, re-discover, re-register.
+
+    Call this after plugin install/uninstall/update to pick up changes
+    without restarting the process.
+    """
+    logger.info("Hot-reloading plugins …")
+    _unregister_all(app, mcp_server)
+    _flush_plugin_modules()
+    return register_plugins(app, mcp_server)
 
 
 def _get_plugin_homepage(plugin_name: str) -> str:
