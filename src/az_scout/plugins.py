@@ -12,13 +12,13 @@ Plugins may be installed in the main venv or in the dedicated
 import importlib.metadata
 import logging
 import sys
-from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from az_scout.plugin_api import AzScoutPlugin, ChatMode
+from az_scout.plugin_manager import _VENV_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ _loaded_plugins: list[AzScoutPlugin] = []
 _plugin_dist_names: dict[str, str] = {}  # plugin.name → pip distribution name
 _plugin_chat_modes: dict[str, ChatMode] = {}
 
-_PLUGIN_VENV_DIR = Path(".venv-plugins")
+_PLUGIN_VENV_DIR = _VENV_DIR
 
 
 def _ensure_plugin_venv_on_path() -> None:

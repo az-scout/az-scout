@@ -19,6 +19,7 @@ from az_scout.plugin_manager import (
     is_commit_sha,
     load_installed,
     parse_github_repo_url,
+    reconcile_installed_plugins,
     save_installed,
     validate_plugin_repo,
 )
@@ -1001,3 +1002,132 @@ class TestRunUvInVenvFallback:
         cmd = mock_run.call_args[0][0]
         assert "-y" in cmd
         assert "some-pkg" in cmd
+
+
+# ---------------------------------------------------------------------------
+# Reconciliation tests
+# ---------------------------------------------------------------------------
+
+
+class TestReconcileInstalledPlugins:
+    def _make_installed_json(self, tmp_path: Path, records: list[dict]) -> Path:  # type: ignore[type-arg]
+        installed_file = tmp_path / "installed.json"
+        installed_file.write_text(json.dumps(records), encoding="utf-8")
+        return installed_file
+
+    def _sample_record(self, name: str = "az-scout-example") -> dict:  # type: ignore[type-arg]
+        return {
+            "distribution_name": name,
+            "repo_url": "https://github.com/owner/repo",
+            "ref": "v1.0.0",
+            "resolved_sha": SAMPLE_SHA,
+            "entry_points": {"example": "mod:obj"},
+            "installed_at": "2026-02-28T00:00:00+00:00",
+            "actor": "tester",
+        }
+
+    def test_no_installed_file(self, tmp_path: Path) -> None:
+        """When installed.json does not exist, reconcile returns empty list."""
+        with patch.object(plugin_manager, "_INSTALLED_FILE", tmp_path / "none.json"):
+            results = reconcile_installed_plugins()
+        assert results == []
+
+    def test_all_plugins_present(self, tmp_path: Path) -> None:
+        """When all plugins are already installed, no reinstall happens."""
+        installed_file = self._make_installed_json(tmp_path, [self._sample_record()])
+        with (
+            patch.object(plugin_manager, "_INSTALLED_FILE", installed_file),
+            patch(
+                "az_scout.plugin_manager._is_plugin_installed_in_venv",
+                return_value=True,
+            ),
+        ):
+            results = reconcile_installed_plugins()
+
+        assert len(results) == 1
+        assert results[0]["reinstalled"] is False
+        assert results[0]["error"] == ""
+
+    def test_missing_plugin_reinstalled(self, tmp_path: Path) -> None:
+        """A plugin missing from the venv is reinstalled from pinned SHA."""
+        installed_file = self._make_installed_json(tmp_path, [self._sample_record()])
+        audit_file = tmp_path / "audit.jsonl"
+        mock_uv = MagicMock()
+        mock_uv.returncode = 0
+        mock_uv.stderr = ""
+
+        with (
+            patch.object(plugin_manager, "_INSTALLED_FILE", installed_file),
+            patch.object(plugin_manager, "_AUDIT_FILE", audit_file),
+            patch.object(plugin_manager, "_DATA_DIR", tmp_path),
+            patch(
+                "az_scout.plugin_manager._is_plugin_installed_in_venv",
+                return_value=False,
+            ),
+            patch(
+                "az_scout.plugin_manager.run_uv_in_venv",
+                return_value=mock_uv,
+            ) as mock_run,
+        ):
+            results = reconcile_installed_plugins()
+
+        assert len(results) == 1
+        assert results[0]["reinstalled"] is True
+        assert results[0]["error"] == ""
+        # Verify it installed from the correct pinned SHA
+        args = mock_run.call_args[0][0]
+        assert "pip" in args
+        assert "install" in args
+        assert SAMPLE_SHA in args[-1]
+
+    def test_reinstall_failure_recorded(self, tmp_path: Path) -> None:
+        """When reinstall fails, the error is captured but other plugins proceed."""
+        records = [
+            self._sample_record("az-scout-a"),
+            self._sample_record("az-scout-b"),
+        ]
+        records[1]["resolved_sha"] = SAMPLE_SHA_2
+        installed_file = self._make_installed_json(tmp_path, records)
+        audit_file = tmp_path / "audit.jsonl"
+
+        mock_fail = MagicMock()
+        mock_fail.returncode = 1
+        mock_fail.stderr = "network error"
+
+        mock_ok = MagicMock()
+        mock_ok.returncode = 0
+        mock_ok.stderr = ""
+
+        def venv_check(name: str) -> bool:
+            return False  # both missing
+
+        call_count = 0
+
+        def run_side_effect(args: list[str]) -> MagicMock:
+            nonlocal call_count
+            call_count += 1
+            # First call fails, second succeeds
+            return mock_fail if call_count == 1 else mock_ok
+
+        with (
+            patch.object(plugin_manager, "_INSTALLED_FILE", installed_file),
+            patch.object(plugin_manager, "_AUDIT_FILE", audit_file),
+            patch.object(plugin_manager, "_DATA_DIR", tmp_path),
+            patch(
+                "az_scout.plugin_manager._is_plugin_installed_in_venv",
+                side_effect=venv_check,
+            ),
+            patch(
+                "az_scout.plugin_manager.run_uv_in_venv",
+                side_effect=run_side_effect,
+            ),
+        ):
+            results = reconcile_installed_plugins()
+
+        assert len(results) == 2
+        # First plugin failed
+        assert results[0]["reinstalled"] is False
+        assert "network error" in str(results[0]["error"])
+        # Second plugin succeeded
+        assert results[1]["reinstalled"] is True
+        assert results[1]["error"] == ""

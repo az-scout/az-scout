@@ -8,6 +8,7 @@ application environment.
 Business logic lives here; FastAPI route handlers are thin wrappers.
 """
 
+import importlib.metadata
 import json
 import logging
 import os
@@ -297,19 +298,24 @@ def ensure_plugins_venv() -> Path:
     if not _VENV_DIR.exists():
         logger.info("Creating plugin venv at %s", _VENV_DIR)
         uv = _find_uv()
-        if uv:
-            subprocess.run(  # noqa: S603
-                [uv, "venv", str(_VENV_DIR)],
-                check=True,
-                capture_output=True,
-            )
-        else:
-            logger.warning("uv not found; falling back to python -m venv")
-            subprocess.run(  # noqa: S603
-                [sys.executable, "-m", "venv", str(_VENV_DIR)],
-                check=True,
-                capture_output=True,
-            )
+        try:
+            if uv:
+                subprocess.run(  # noqa: S603
+                    [uv, "venv", "--relocatable", str(_VENV_DIR)],
+                    check=True,
+                    capture_output=True,
+                )
+            else:
+                logger.warning("uv not found; falling back to python -m venv")
+                subprocess.run(  # noqa: S603
+                    [sys.executable, "-m", "venv", str(_VENV_DIR)],
+                    check=True,
+                    capture_output=True,
+                )
+        except subprocess.CalledProcessError as exc:
+            stderr = exc.stderr.decode() if isinstance(exc.stderr, bytes) else (exc.stderr or "")
+            logger.error("Failed to create plugin venv: %s", stderr)
+            raise
     return _VENV_DIR
 
 
@@ -889,8 +895,105 @@ def uninstall_plugin(
 
 
 # ---------------------------------------------------------------------------
-# Audit helper
+# Startup reconciliation
 # ---------------------------------------------------------------------------
+
+
+def _is_plugin_installed_in_venv(distribution_name: str) -> bool:
+    """Check whether a plugin distribution is importable from the plugin venv."""
+    sp_dirs = sorted(_VENV_DIR.glob("lib/python*/site-packages"))
+    if not sp_dirs:
+        return False
+    str_dirs = [str(d) for d in sp_dirs]
+    for dist in importlib.metadata.distributions(path=str_dirs):
+        if dist.name == distribution_name:
+            return True
+    return False
+
+
+def reconcile_installed_plugins() -> list[dict[str, str | bool]]:
+    """Re-install plugins listed in ``installed.json`` but missing from the venv.
+
+    This is the "self-healing" step called at startup.  When the container is
+    ephemeral but ``installed.json`` lives on a durable volume, the venv may be
+    empty after a scale-to-zero restart.  For each missing plugin the function
+    runs ``uv pip install git+<repo>.git@<sha>`` using the exact pinned SHA so
+    the build is reproducible.
+
+    Returns a list of per-plugin dicts with keys ``distribution_name``,
+    ``reinstalled`` (bool), and ``error`` (str, empty on success).
+    """
+    records = load_installed()
+    if not records:
+        return []
+
+    results: list[dict[str, str | bool]] = []
+    for record in records:
+        if _is_plugin_installed_in_venv(record.distribution_name):
+            logger.debug(
+                "Plugin '%s' already present in venv — skipping",
+                record.distribution_name,
+            )
+            results.append(
+                {
+                    "distribution_name": record.distribution_name,
+                    "reinstalled": False,
+                    "error": "",
+                }
+            )
+            continue
+
+        # Need to reinstall from pinned SHA
+        clean_url = record.repo_url.rstrip("/")
+        if not clean_url.endswith(".git"):
+            clean_url += ".git"
+        git_url = f"git+{clean_url}@{record.resolved_sha}"
+        logger.info(
+            "Reconciling plugin '%s' — reinstalling from %s",
+            record.distribution_name,
+            git_url,
+        )
+
+        result = run_uv_in_venv(["pip", "install", git_url])
+        if result.returncode == 0:
+            results.append(
+                {
+                    "distribution_name": record.distribution_name,
+                    "reinstalled": True,
+                    "error": "",
+                }
+            )
+            logger.info("Reconciled plugin '%s' successfully", record.distribution_name)
+        else:
+            err = result.stderr.strip()
+            results.append(
+                {
+                    "distribution_name": record.distribution_name,
+                    "reinstalled": False,
+                    "error": err,
+                }
+            )
+            logger.error(
+                "Failed to reconcile plugin '%s': %s",
+                record.distribution_name,
+                err,
+            )
+
+        append_audit(
+            {
+                "action": "reconcile",
+                "distribution_name": record.distribution_name,
+                "repo_url": record.repo_url,
+                "resolved_sha": record.resolved_sha,
+                "success": result.returncode == 0,
+                "detail": "reinstalled" if result.returncode == 0 else err,
+            }
+        )
+
+    reinstalled = sum(1 for r in results if r["reinstalled"])
+    if reinstalled:
+        logger.info("Reconciled %d plugin(s) at startup", reinstalled)
+    return results
 
 
 def _audit_event(
