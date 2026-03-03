@@ -699,6 +699,7 @@ select.no-arrow {
 }
 .chat-message.assistant {
     align-self: flex-start;
+    flex-direction: column;
 }
 
 .chat-bubble {
@@ -815,6 +816,11 @@ select.no-arrow {
 .chat-tool-badge.done {
     background: #d1e7dd;
     color: #0f5132;
+    cursor: pointer;
+    transition: filter 0.15s;
+}
+.chat-tool-badge.done:hover {
+    filter: brightness(0.9);
 }
 [data-bs-theme="dark"] .chat-tool-badge.calling {
     background: #4a3c00;
@@ -823,6 +829,43 @@ select.no-arrow {
 [data-bs-theme="dark"] .chat-tool-badge.done {
     background: #1e4620;
     color: #a3d9a5;
+}
+[data-bs-theme="dark"] .chat-tool-badge.done:hover {
+    filter: brightness(1.2);
+}
+
+/* Tool detail modal pre-formatted output */
+.tool-detail-wrap {
+    position: relative;
+}
+.tool-detail-wrap .tool-copy-btn {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    z-index: 1;
+    padding: 0.25rem 0.45rem;
+    font-size: 0.90rem;
+    line-height: 1;
+    color: var(--bs-secondary-color, #6c757d);
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.25rem;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+}
+.tool-detail-wrap:hover .tool-copy-btn {
+    opacity: 1;
+}
+.tool-detail-pre {
+    max-height: 40vh;
+    overflow: auto;
+    font-size: 0.75rem;
+    padding: 0.6rem;
+    border-radius: 0.375rem;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }

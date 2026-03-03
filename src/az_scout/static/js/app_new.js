@@ -1,6 +1,5 @@
 /* ===================================================================
-   Azure Scout – Core  (shared state, theme, init, API helpers)
-   See also: az-mapping.js, planner.js, chat.js
+   Azure Scout – Frontend Logic  (Bootstrap 5 rewrite)
    =================================================================== */
 
 // ---------------------------------------------------------------------------
@@ -26,12 +25,6 @@ function applyTheme(theme) {
     if (iconDark && iconLight) {
         iconDark.classList.toggle("d-none", theme === "dark");
         iconLight.classList.toggle("d-none", theme !== "dark");
-    }
-    // Switch highlight.js theme stylesheet
-    const hljsLink = document.getElementById("hljs-theme");
-    if (hljsLink) {
-        const variant = theme === "dark" ? "atom-one-dark" : "atom-one-light";
-        hljsLink.href = `https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/${variant}.min.css`;
     }
 }
 

@@ -22,10 +22,9 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
   (AI chat panel).
 - **Spot Placement Score cache TTL** increased from 10 minutes to 1 hour to reduce pressure on the
   rate-limited Azure API.
-
-### Removed
-
-- Removed `scoringVersion` field from scoring results and provenance – no longer maintained.
+- **Chat UI** - Tool call badges (e.g. "list subscriptions", "get zone mappings") now remain visible
+  after the tool finishes executing, and clicking a completed badge opens a detail modal showing the full
+  input arguments and output content with JSON syntax highlighting. (#74)
 
 
 ## [2026.3.1] - 2026-03-02

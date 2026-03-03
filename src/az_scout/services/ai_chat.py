@@ -622,6 +622,10 @@ _DEFAULT_RETRY_WAIT = 10  # seconds when no Retry-After header
 # keep the total prompt under the model's token limit and avoid 429 errors.
 _MAX_TOOL_RESULT_CHARS = 30_000
 
+# Maximum characters sent to the frontend UI for tool result inspection.
+# Larger than the summary (200 chars) but smaller than the LLM context budget.
+_MAX_TOOL_UI_CHARS = 10_000
+
 
 async def chat_stream(
     messages: list[dict[str, Any]],
@@ -638,7 +642,8 @@ async def chat_stream(
     Each data payload is one of:
     - ``{"type": "delta", "content": "..."}``  – streamed text chunk
     - ``{"type": "tool_call", "name": "...", "arguments": "..."}``  – tool invocation info
-    - ``{"type": "tool_result", "name": "...", "summary": "..."}``  – tool result summary
+    - ``{"type": "tool_result", "name": "...", "arguments": "...", "content": "..."}``
+      – tool result with I/O data for UI inspection
     - ``{"type": "error", "content": "..."}``  – error
     - ``{"type": "done"}``  – stream finished
     """
@@ -845,13 +850,18 @@ async def chat_stream(
 
                 result = _execute_tool(tool_name, args)
 
-                # Send a brief summary to the UI (truncate large results)
-                summary = result[:200] + "…" if len(result) > 200 else result
+                # Send result to the UI for tool inspection
+                ui_content = (
+                    result[:_MAX_TOOL_UI_CHARS] + "\n… (truncated)"
+                    if len(result) > _MAX_TOOL_UI_CHARS
+                    else result
+                )
                 yield _sse(
                     {
                         "type": "tool_result",
                         "name": tool_name,
-                        "summary": summary,
+                        "arguments": json.dumps(args),
+                        "content": ui_content,
                     }
                 )
 
