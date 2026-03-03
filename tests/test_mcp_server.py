@@ -321,6 +321,7 @@ class TestMcpGetSkuAvailability:
         assert "score" in conf
         assert "label" in conf
         assert 0 <= conf["score"] <= 100
+        assert conf["scoreType"] == "basic"
 
     @pytest.mark.anyio()
     async def test_no_pricing_by_default(self, _mock_credential):
@@ -397,6 +398,171 @@ class TestMcpGetSpotScores:
             10,
             "tid-x",
         )
+
+
+# ---------------------------------------------------------------------------
+# deployment_confidence
+# ---------------------------------------------------------------------------
+
+
+class TestMcpDeploymentConfidence:
+    """Tests for the deployment_confidence MCP tool."""
+
+    @pytest.mark.anyio()
+    async def test_basic_confidence(self, _mock_credential):
+        """Basic (no spot) confidence returns scoreType 'basic'."""
+        mock_skus = [
+            {
+                "name": "Standard_D2s_v3",
+                "tier": "Standard",
+                "size": "D2s_v3",
+                "family": "standardDSv3Family",
+                "zones": ["1", "2", "3"],
+                "restrictions": [],
+                "capabilities": {"vCPUs": "2", "MemoryGB": "8"},
+            }
+        ]
+        mock_usages = [
+            {
+                "currentValue": 4,
+                "limit": 50,
+                "name": {"value": "standardDSv3Family"},
+                "unit": "Count",
+            }
+        ]
+        with (
+            patch("az_scout.azure_api.get_skus", return_value=mock_skus),
+            patch("az_scout.azure_api.quotas.get_compute_usages", return_value=mock_usages),
+            patch("az_scout.azure_api.enrich_skus_with_prices"),
+        ):
+            content, _ = await mcp.call_tool(
+                "deployment_confidence",
+                {
+                    "region": "eastus",
+                    "subscription_id": "sub-1",
+                    "skus": ["Standard_D2s_v3"],
+                },
+            )
+
+        data = json.loads(content[0].text)
+        assert data["region"] == "eastus"
+        assert data["subscriptionId"] == "sub-1"
+        assert len(data["results"]) == 1
+        conf = data["results"][0]["deploymentConfidence"]
+        assert conf["scoreType"] == "basic"
+        assert 0 <= conf["score"] <= 100
+        assert "rawSignals" in data["results"][0]
+
+    @pytest.mark.anyio()
+    async def test_with_spot(self, _mock_credential):
+        """With prefer_spot=True and valid spot data returns 'basic+spot'."""
+        mock_skus = [
+            {
+                "name": "Standard_D2s_v3",
+                "tier": "Standard",
+                "size": "D2s_v3",
+                "family": "standardDSv3Family",
+                "zones": ["1", "2", "3"],
+                "restrictions": [],
+                "capabilities": {"vCPUs": "2", "MemoryGB": "8"},
+            }
+        ]
+        mock_usages = [
+            {
+                "currentValue": 4,
+                "limit": 50,
+                "name": {"value": "standardDSv3Family"},
+                "unit": "Count",
+            }
+        ]
+        mock_spot = {
+            "scores": {"Standard_D2s_v3": {"1": "High", "2": "High", "3": "Medium"}},
+            "errors": [],
+        }
+        with (
+            patch("az_scout.azure_api.get_skus", return_value=mock_skus),
+            patch("az_scout.azure_api.quotas.get_compute_usages", return_value=mock_usages),
+            patch("az_scout.azure_api.enrich_skus_with_prices"),
+            patch("az_scout.azure_api.get_spot_placement_scores", return_value=mock_spot),
+        ):
+            content, _ = await mcp.call_tool(
+                "deployment_confidence",
+                {
+                    "region": "eastus",
+                    "subscription_id": "sub-1",
+                    "skus": ["Standard_D2s_v3"],
+                    "prefer_spot": True,
+                    "instance_count": 3,
+                },
+            )
+
+        data = json.loads(content[0].text)
+        conf = data["results"][0]["deploymentConfidence"]
+        assert conf["scoreType"] == "basic+spot"
+
+    @pytest.mark.anyio()
+    async def test_unknown_sku_returns_error(self, _mock_credential):
+        """Unknown SKU name is reported in errors."""
+        with (
+            patch("az_scout.azure_api.get_skus", return_value=[]),
+            patch("az_scout.azure_api.quotas.get_compute_usages", return_value=[]),
+            patch("az_scout.azure_api.enrich_skus_with_prices"),
+        ):
+            content, _ = await mcp.call_tool(
+                "deployment_confidence",
+                {
+                    "region": "eastus",
+                    "subscription_id": "sub-1",
+                    "skus": ["Standard_NOPE_v99"],
+                },
+            )
+
+        data = json.loads(content[0].text)
+        assert len(data["results"]) == 0
+        assert any("Standard_NOPE_v99" in e for e in data["errors"])
+
+    @pytest.mark.anyio()
+    async def test_exclude_signals_and_provenance(self, _mock_credential):
+        """Signals and provenance can be excluded from the response."""
+        mock_skus = [
+            {
+                "name": "Standard_D2s_v3",
+                "tier": "Standard",
+                "size": "D2s_v3",
+                "family": "standardDSv3Family",
+                "zones": ["1", "2", "3"],
+                "restrictions": [],
+                "capabilities": {"vCPUs": "2", "MemoryGB": "8"},
+            }
+        ]
+        mock_usages = [
+            {
+                "currentValue": 4,
+                "limit": 50,
+                "name": {"value": "standardDSv3Family"},
+                "unit": "Count",
+            }
+        ]
+        with (
+            patch("az_scout.azure_api.get_skus", return_value=mock_skus),
+            patch("az_scout.azure_api.quotas.get_compute_usages", return_value=mock_usages),
+            patch("az_scout.azure_api.enrich_skus_with_prices"),
+        ):
+            content, _ = await mcp.call_tool(
+                "deployment_confidence",
+                {
+                    "region": "eastus",
+                    "subscription_id": "sub-1",
+                    "skus": ["Standard_D2s_v3"],
+                    "include_signals": False,
+                    "include_provenance": False,
+                },
+            )
+
+        data = json.loads(content[0].text)
+        entry = data["results"][0]
+        assert "rawSignals" not in entry
+        assert "provenance" not in entry["deploymentConfidence"]
 
 
 # ---------------------------------------------------------------------------

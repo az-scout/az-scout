@@ -5,8 +5,20 @@ Confidence Score.  Both the web UI (via FastAPI endpoints) and the MCP
 server **must** use ``compute_deployment_confidence`` – no client-side
 recomputation is permitted.
 
-Scoring rule (v1)
------------------
+Score types
+-----------
+**Basic** (default):  Four signals – quota, zones, restrictions, price
+pressure.  Spot Placement is *excluded* (``spot_score_label=None``) and
+the remaining weights are renormalised.  This is what appears in the SKU
+table listing and the default modal view.
+
+**Basic + Spot**:  Same five signals as v1 – quota, spot, zones,
+restrictions, price pressure.  Activated when the caller supplies a
+``spot_score_label`` to ``signals_from_sku`` (typically after fetching
+Spot Placement Scores with a specific instance count).
+
+Scoring rule
+------------
 Five independent signals are normalised to 0–1, weighted, and summed.
 Missing signals are excluded and the remaining weights are renormalised so
 the score stays meaningful.
@@ -45,7 +57,7 @@ from pydantic import BaseModel
 # ---------------------------------------------------------------------------
 # Version – bump when weights or normalisation rules change
 # ---------------------------------------------------------------------------
-SCORING_VERSION = "v1"
+SCORING_VERSION = "v2"
 
 # ---------------------------------------------------------------------------
 # Weights (must sum to 1.0)
@@ -137,6 +149,7 @@ class DeploymentConfidenceResult(BaseModel):
 
     score: int
     label: str
+    scoreType: str  # "basic" | "basic+spot"
     breakdown: BreakdownDetail
     missingSignals: list[str]
     disclaimers: list[str]
@@ -158,12 +171,34 @@ def _normalize_quota(remaining: int | None, vcpus: int | None) -> float | None:
     return min(remaining / max(vcpus, 1) / 10.0, 1.0)
 
 
+# Labels from the Azure Spot Placement Scores API that mean
+# "spot is definitively unavailable" — score them as 0.0, not missing.
+_SPOT_UNAVAILABLE_LABELS: frozenset[str] = frozenset(
+    {
+        "restrictedskunotavailable",
+        "restricted",
+    }
+)
+
+
 def _normalize_spot(label: str | None) -> float | None:
-    """Map a Spot Placement Score label to 0–1."""
+    """Map a Spot Placement Score label to 0–1.
+
+    Restricted/unavailable labels are scored as 0.0 (definitively bad)
+    rather than ``None`` (missing), so they contribute to the weighted
+    sum instead of being silently excluded.
+    """
     if label is None:
         return None
+    key = label.lower()
     mapping: dict[str, float] = {"high": 1.0, "medium": 0.6, "low": 0.25}
-    return mapping.get(label.lower())
+    value = mapping.get(key)
+    if value is not None:
+        return value
+    if key in _SPOT_UNAVAILABLE_LABELS:
+        return 0.0
+    # Genuinely unknown / no data → treat as missing
+    return None
 
 
 def _normalize_zones(zones_available_count: int | None) -> float | None:
@@ -269,12 +304,17 @@ def compute_deployment_confidence(
     signals_available = len(WEIGHTS) - len(missing_signals)
     renormalized = len(missing_signals) > 0 and signals_available > 0
 
+    # ----- determine score type ---------------------------------------
+    has_spot = "spot" not in missing_signals
+    score_type = "basic+spot" if has_spot else "basic"
+
     # ----- too few signals → Unknown ---------------------------------
     if signals_available < MIN_SIGNALS:
         all_components = _build_all_missing_components(normalized)
         return _make_result(
             score=0,
             label="Unknown",
+            score_type=score_type,
             components=all_components,
             weights_used_sum=0.0,
             renormalized=False,
@@ -327,6 +367,7 @@ def compute_deployment_confidence(
     return _make_result(
         score=score,
         label=label,
+        score_type=score_type,
         components=components,
         weights_used_sum=round(used_weights_sum, 4),
         renormalized=renormalized,
@@ -342,7 +383,10 @@ def compute_deployment_confidence(
 def best_spot_label(zone_scores: dict[str, str]) -> str | None:
     """Pick the best Spot Placement Score label from per-zone data.
 
-    Returns ``None`` if *zone_scores* is empty.
+    Returns ``None`` only if *zone_scores* is empty.  When all zones
+    report non-scorable values (e.g. ``RestrictedSkuNotAvailable``),
+    the first such value is returned so the caller can still include
+    Spot as a 0-score signal rather than silently excluding it.
     """
     if not zone_scores:
         return None
@@ -351,6 +395,11 @@ def best_spot_label(zone_scores: dict[str, str]) -> str | None:
     for label in zone_scores.values():
         if rank.get(label.lower(), 0) > rank.get((best or "").lower(), 0):
             best = label
+    # If no High/Medium/Low found but zones had data, return the first
+    # label (e.g. "RestrictedSkuNotAvailable") so _normalize_spot can
+    # map it to 0.0 instead of treating spot as entirely missing.
+    if best is None and zone_scores:
+        best = next(iter(zone_scores.values()))
     return best
 
 
@@ -426,6 +475,7 @@ def _make_result(
     *,
     score: int,
     label: str,
+    score_type: str,
     components: list[ComponentBreakdown],
     weights_used_sum: float,
     renormalized: bool,
@@ -434,6 +484,7 @@ def _make_result(
     return DeploymentConfidenceResult(
         score=score,
         label=label,
+        scoreType=score_type,
         breakdown=BreakdownDetail(
             components=components,
             weightsOriginal=dict(WEIGHTS),

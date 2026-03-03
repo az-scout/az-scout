@@ -1070,6 +1070,136 @@ function getPlannerPhysicalZoneMap() {
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
+// Include Spot in Deployment Confidence (called from confidence controls)
+// ---------------------------------------------------------------------------
+async function includeSpotInConfidence() {
+    const skuName = _pricingModalSku;
+    if (!skuName) return;
+    const region = document.getElementById("region-select").value;
+    const tenant = document.getElementById("tenant-select").value;
+    const subscriptionId = plannerSubscriptionId;
+    if (!subscriptionId || !region) return;
+
+    const btn = document.querySelector('.confidence-controls .btn-outline-primary');
+    const origHtml = btn?.innerHTML;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Calculating…';
+    }
+    const instanceCount = parseInt(document.getElementById("confidence-spot-instances")?.value, 10) || 1;
+    const currency = document.getElementById("planner-currency")?.value || "USD";
+
+    try {
+        const payload = {
+            subscriptionId,
+            region,
+            currencyCode: currency,
+            preferSpot: true,
+            instanceCount,
+            skus: [skuName],
+            includeSignals: false,
+            includeProvenance: true,
+        };
+        if (tenant) payload.tenantId = tenant;
+
+        const result = await apiPost("/api/deployment-confidence", payload);
+
+        let spotIncluded = false;
+        if (result.results) {
+            for (const r of result.results) {
+                const sku = (lastSkuData || []).find(s => s.name === r.sku);
+                if (sku && r.deploymentConfidence) {
+                    sku.confidence = r.deploymentConfidence;
+                    if (r.deploymentConfidence.scoreType === "basic+spot") spotIncluded = true;
+                }
+            }
+        }
+
+        // Show feedback if spot could not be included
+        if (!spotIncluded) {
+            const reason = (result.warnings || []).join("; ") || "Spot Placement Scores unavailable or restricted for this SKU.";
+            showError("planner-error", reason);
+        }
+
+        // Re-render table and region summary
+        if (lastSkuData) {
+            renderRegionSummary(lastSkuData);
+            renderSkuTable(lastSkuData);
+        }
+
+        // Re-render modal in place, keeping open accordions
+        if (_lastPricingData) {
+            const content = document.getElementById("pricing-modal-content");
+            const openIds = [...content.querySelectorAll('.accordion-collapse.show')].map(el => el.id).filter(Boolean);
+            renderPricingDetail(_lastPricingData, openIds);
+        }
+    } catch (err) {
+        showError("planner-error", "Failed to include Spot in confidence: " + err.message);
+        if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Reset to Basic confidence (exclude Spot)
+// ---------------------------------------------------------------------------
+async function resetToBasicConfidence() {
+    const skuName = _pricingModalSku;
+    if (!skuName) return;
+    const region = document.getElementById("region-select").value;
+    const tenant = document.getElementById("tenant-select").value;
+    const subscriptionId = plannerSubscriptionId;
+    if (!subscriptionId || !region) return;
+
+    const btn = document.querySelector('.confidence-controls .btn-outline-secondary');
+    const origHtml = btn?.innerHTML;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Resetting…';
+    }
+    const currency = document.getElementById("planner-currency")?.value || "USD";
+
+    try {
+        const payload = {
+            subscriptionId,
+            region,
+            currencyCode: currency,
+            preferSpot: false,
+            instanceCount: 1,
+            skus: [skuName],
+            includeSignals: false,
+            includeProvenance: true,
+        };
+        if (tenant) payload.tenantId = tenant;
+
+        const result = await apiPost("/api/deployment-confidence", payload);
+        if (result.results) {
+            for (const r of result.results) {
+                const sku = (lastSkuData || []).find(s => s.name === r.sku);
+                if (sku && r.deploymentConfidence) {
+                    sku.confidence = r.deploymentConfidence;
+                }
+            }
+        }
+
+        // Re-render table and region summary
+        if (lastSkuData) {
+            renderRegionSummary(lastSkuData);
+            renderSkuTable(lastSkuData);
+        }
+
+        // Re-render modal in place, keeping open accordions
+        if (_lastPricingData) {
+            const content = document.getElementById("pricing-modal-content");
+            const openIds = [...content.querySelectorAll('.accordion-collapse.show')].map(el => el.id).filter(Boolean);
+            renderPricingDetail(_lastPricingData, openIds);
+        }
+    } catch (err) {
+        showError("planner-error", "Failed to reset confidence: " + err.message);
+        if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Fetch spot score from the Zone Availability panel button
 // ---------------------------------------------------------------------------
 async function fetchSpotFromPanel() {
@@ -1631,8 +1761,13 @@ function renderQuotaPanel(quota, vcpus, confidence) {
 
 function renderConfidenceBreakdown(conf) {
     const lbl = (conf.label || "").toLowerCase().replace(/\s+/g, "-");
+    const isBasicWithSpot = conf.scoreType === "basic+spot";
+    const titleText = isBasicWithSpot ? "Deployment Confidence (with Spot)" : "Basic Deployment Confidence";
+    const tooltipText = isBasicWithSpot
+        ? "Composite score (0\u2013100) including Spot Placement signal. Scoring version: " + escapeHtml(conf.scoringVersion || "")
+        : "Composite score (0\u2013100) based on quota, zones, restrictions and price pressure. Spot excluded by default. Scoring version: " + escapeHtml(conf.scoringVersion || "");
     let html = '<div class="confidence-section">';
-    html += `<h4 class="confidence-title">Deployment Confidence <span class="confidence-badge confidence-${lbl}">${conf.score} ${escapeHtml(conf.label || "")}</span> <i class="bi bi-info-circle text-body-secondary confidence-info-icon" data-bs-toggle="tooltip" data-bs-title="Composite score (0\u2013100) predicting deployment success based on weighted signals. Higher is better. Scoring version: ${escapeHtml(conf.scoringVersion || '')}"></i></h4>`;
+    html += `<h4 class="confidence-title">${escapeHtml(titleText)} <span class="confidence-badge confidence-${lbl}">${conf.score} ${escapeHtml(conf.label || "")}</span> <i class="bi bi-info-circle text-body-secondary confidence-info-icon" data-bs-toggle="tooltip" data-bs-title="${escapeHtml(tooltipText)}"></i></h4>`;
     const components = conf.breakdown?.components || conf.breakdown || [];
     const usedComponents = components.filter(c => c.status === "used");
     if (usedComponents.length) {
@@ -1654,12 +1789,23 @@ function renderConfidenceBreakdown(conf) {
         });
         html += '</tbody></table>';
     }
-    const missingSignals = conf.missingSignals || conf.missing || [];
-    if (missingSignals.length) {
-        const signalLabels = { quota: "Quota Headroom", spot: "Spot Placement", zones: "Zone Breadth", restrictions: "Restrictions", pricePressure: "Price Pressure" };
-        const names = missingSignals.map(m => signalLabels[m] || m).join(", ");
+    // Separate spot from other missing signals
+    const allMissing = conf.missingSignals || conf.missing || [];
+    const spotMissing = allMissing.includes("spot");
+    const otherMissing = allMissing.filter(m => m !== "spot");
+    if (otherMissing.length) {
+        const signalLabels = { quota: "Quota Headroom", zones: "Zone Breadth", restrictions: "Restrictions", pricePressure: "Price Pressure" };
+        const names = otherMissing.map(m => signalLabels[m] || m).join(", ");
         html += `<p class="confidence-missing"><i class="bi bi-exclamation-circle"></i> Missing signals (excluded from score): ${escapeHtml(names)}</p>`;
     }
+    // Scoring controls: recalculate basic or with spot
+    html += '<div class="confidence-controls mt-2 pt-2 border-top">';
+    html += '<div class="d-flex align-items-center gap-2 flex-wrap">';
+    html += '<button class="btn btn-sm btn-outline-success" onclick="resetToBasicConfidence()"><i class="bi bi-arrow-counterclockwise me-1"></i>Recalculate (no Spot)</button>';
+    html += '<span class="text-body-secondary small">|</span>';
+    html += '<button class="btn btn-sm btn-outline-primary" onclick="includeSpotInConfidence()"><i class="bi bi-lightning-charge me-1"></i>Recalculate with Spot</button>';
+    html += '<input type="number" id="confidence-spot-instances" class="form-control form-control-sm" value="1" min="1" max="1000" style="width:70px;" title="Instance count for spot evaluation"> spot instances';
+    html += '</div></div>';
     if (conf.disclaimers?.length) {
         html += '<p class="confidence-disclaimer text-body-secondary small fst-italic mt-1 mb-0">' + escapeHtml(conf.disclaimers[0]) + '</p>';
     }
@@ -1739,7 +1885,7 @@ function renderRegionSummary(skus) {
     if (scores.readiness != null) {
         html += `<div class="region-score-card">`;
         html += `<div class="region-score-label">Region Readiness</div>`;
-        html += `<div class="region-score-value"><span class="confidence-badge confidence-${readinessLbl}" data-bs-toggle="tooltip" data-bs-title="Average deployment confidence across ${scores.total} SKUs. Reflects quota, spot availability, zone coverage, restrictions and pricing."><i class="bi ${icons[readinessLbl] || 'bi-shield'}"></i> ${scores.readiness}</span></div>`;
+        html += `<div class="region-score-value"><span class="confidence-badge confidence-${readinessLbl}" data-bs-toggle="tooltip" data-bs-title="Average basic deployment confidence across ${scores.total} SKUs. Reflects quota, zone coverage, restrictions and price pressure (spot excluded)."><i class="bi ${icons[readinessLbl] || 'bi-shield'}"></i> ${scores.readiness}</span></div>`;
         html += `</div>`;
     }
 
@@ -1853,7 +1999,7 @@ function renderSkuTable(skus) {
             const lbl = (conf.label || "").toLowerCase().replace(/\s+/g, "-");
             const confIcons = { high: "bi-check-circle-fill", medium: "bi-dash-circle-fill", low: "bi-exclamation-triangle-fill", "very-low": "bi-x-circle-fill" };
             const icon = confIcons[lbl] || "bi-question-circle";
-            html += `<td data-sort="${conf.score}"><span class="confidence-badge confidence-${lbl}" data-bs-toggle="tooltip" data-bs-title="Deployment confidence: ${conf.score}/100 (${escapeHtml(conf.label || '')})"><i class="bi ${icon}"></i> ${conf.score}</span></td>`;
+            html += `<td data-sort="${conf.score}"><span class="confidence-badge confidence-${lbl}" data-bs-toggle="tooltip" data-bs-title="Basic deployment confidence: ${conf.score}/100 (${escapeHtml(conf.label || '')}). Spot excluded."><i class="bi ${icon}"></i> ${conf.score}</span></td>`;
         } else {
             html += '<td data-sort="-1">\u2014</td>';
         }

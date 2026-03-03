@@ -1877,6 +1877,7 @@ class TestDeploymentConfidence:
         assert "label" in conf
         assert "breakdown" in conf
         assert "missingSignals" in conf
+        assert conf["scoreType"] == "basic"
 
     def test_confidence_without_prices(self, client):
         """Without pricing, pricePressure should be in the missing list."""

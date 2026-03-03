@@ -522,7 +522,17 @@ async def deployment_confidence(body: DeploymentConfidenceRequest) -> JSONRespon
                 errors.append(f"SKU '{sku_name}' not found in region '{body.region}'")
                 continue
 
-            spot_label = best_spot_label(spot_scores.get(sku_name, {}))
+            sku_spot_zones = spot_scores.get(sku_name, {})
+            spot_label = best_spot_label(sku_spot_zones)
+            if body.preferSpot and sku_spot_zones and spot_label is None:
+                # Spot data was returned but all zones are restricted/unavailable
+                zone_values = list(sku_spot_zones.values())
+                warnings.append(
+                    f"Spot data for '{sku_name}' returned non-scorable values "
+                    f"({', '.join(zone_values)}); excluded from confidence."
+                )
+            elif body.preferSpot and not sku_spot_zones and not warnings:
+                warnings.append(f"No Spot Placement Score data available for '{sku_name}'.")
             sig = signals_from_sku(sku_data, spot_score_label=spot_label)
             result = compute_deployment_confidence(sig)
 

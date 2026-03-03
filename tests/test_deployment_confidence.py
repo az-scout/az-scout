@@ -76,6 +76,12 @@ class TestNormalizeSpot:
     def test_unknown_label_returns_none(self):
         assert _normalize_spot("Unknown") is None
 
+    def test_restricted_returns_zero(self):
+        assert _normalize_spot("RestrictedSkuNotAvailable") == 0.0
+
+    def test_restricted_short_returns_zero(self):
+        assert _normalize_spot("Restricted") == 0.0
+
 
 class TestNormalizeZones:
     def test_none_returns_none(self):
@@ -345,6 +351,50 @@ class TestComputeDeploymentConfidence:
         assert isinstance(d, dict)
         assert d["score"] == result.score
         assert d["label"] == result.label
+        assert d["scoreType"] in ("basic", "basic+spot")
+
+    def test_score_type_basic_when_no_spot(self):
+        """scoreType is 'basic' when spot signal is missing."""
+        result = compute_deployment_confidence(
+            DeploymentSignals(
+                vcpus=2,
+                zones_available_count=3,
+                restrictions_present=False,
+                quota_remaining_vcpu=20,
+                paygo_price=1.0,
+                spot_price=0.2,
+            )
+        )
+        assert result.scoreType == "basic"
+        assert "spot" in result.missingSignals
+
+    def test_score_type_basic_spot_when_spot_present(self):
+        """scoreType is 'basic+spot' when spot signal is provided."""
+        result = compute_deployment_confidence(
+            DeploymentSignals(
+                vcpus=2,
+                zones_available_count=3,
+                restrictions_present=False,
+                quota_remaining_vcpu=20,
+                spot_score_label="High",
+                paygo_price=1.0,
+                spot_price=0.2,
+            )
+        )
+        assert result.scoreType == "basic+spot"
+        assert "spot" not in result.missingSignals
+
+    def test_score_type_basic_with_all_missing(self):
+        """scoreType is 'basic' even when all signals are missing (Unknown)."""
+        result = compute_deployment_confidence(DeploymentSignals())
+        assert result.scoreType == "basic"
+        assert result.label == "Unknown"
+
+    def test_score_type_basic_spot_in_unknown(self):
+        """scoreType is 'basic+spot' if only spot is provided but below MIN_SIGNALS."""
+        result = compute_deployment_confidence(DeploymentSignals(spot_score_label="High"))
+        assert result.scoreType == "basic+spot"
+        assert result.label == "Unknown"
 
     def test_score_always_int_0_100(self):
         """Score must be an integer between 0 and 100 inclusive."""
@@ -360,6 +410,25 @@ class TestComputeDeploymentConfidence:
             )
             assert isinstance(result.score, int)
             assert 0 <= result.score <= 100
+
+    def test_restricted_spot_included_as_zero_score(self):
+        """Restricted spot label is included with score 0, not treated as missing."""
+        result = compute_deployment_confidence(
+            DeploymentSignals(
+                vcpus=2,
+                zones_available_count=3,
+                restrictions_present=False,
+                quota_remaining_vcpu=20,
+                spot_score_label="RestrictedSkuNotAvailable",
+                paygo_price=1.0,
+                spot_price=0.2,
+            )
+        )
+        assert result.scoreType == "basic+spot"
+        assert "spot" not in result.missingSignals
+        spot_component = next(c for c in result.breakdown.components if c.name == "spot")
+        assert spot_component.status == "used"
+        assert spot_component.score01 == 0.0
 
     def test_weights_constant_sums_to_one(self):
         assert sum(WEIGHTS.values()) == pytest.approx(1.0)
@@ -386,9 +455,22 @@ class TestBestSpotLabel:
     def test_case_insensitive(self):
         assert best_spot_label({"1": "low", "2": "HIGH"}) == "HIGH"
 
-    def test_unknown_labels_not_ranked(self):
-        # "Unknown" is not in the ranking map → treated as rank 0, returns None
-        assert best_spot_label({"1": "Unknown"}) is None
+    def test_unknown_labels_returns_fallback(self):
+        # "Unknown" is not in the scoring map but zone data exists,
+        # so the first label is returned as a fallback.
+        assert best_spot_label({"1": "Unknown"}) == "Unknown"
+
+    def test_restricted_labels_returned_as_fallback(self):
+        result = best_spot_label(
+            {"1": "RestrictedSkuNotAvailable", "2": "RestrictedSkuNotAvailable"}
+        )
+        assert result == "RestrictedSkuNotAvailable"
+
+    def test_scorable_preferred_over_restricted(self):
+        result = best_spot_label(
+            {"1": "RestrictedSkuNotAvailable", "2": "Low", "3": "RestrictedSkuNotAvailable"}
+        )
+        assert result == "Low"
 
 
 # ===================================================================

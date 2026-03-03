@@ -30,6 +30,7 @@ from pydantic import Field
 
 from az_scout import azure_api
 from az_scout.scoring.deployment_confidence import (
+    best_spot_label,
     compute_deployment_confidence,
     signals_from_sku,
 )
@@ -253,6 +254,116 @@ def get_spot_scores(
         tenant_id,
     )
     return json.dumps(result, indent=2)
+
+
+@mcp.tool()
+def deployment_confidence(
+    region: Annotated[str, Field(description="Azure region name (e.g. eastus).")],
+    subscription_id: Annotated[str, Field(description="Subscription ID to query.")],
+    skus: Annotated[list[str], Field(description="List of VM SKU names to score.")],
+    prefer_spot: Annotated[
+        bool,
+        Field(
+            description=(
+                "Include Spot Placement Scores in the confidence calculation. "
+                "When true, the tool fetches spot scores and produces a "
+                "'basic+spot' scoreType; otherwise 'basic'."
+            )
+        ),
+    ] = False,
+    instance_count: Annotated[
+        int, Field(description="Instance count for spot evaluation (default: 1).")
+    ] = 1,
+    currency_code: Annotated[
+        str, Field(description="Currency code for pricing signals (default: USD).")
+    ] = "USD",
+    include_signals: Annotated[
+        bool,
+        Field(description="Include raw signal values used to compute the score (default: true)."),
+    ] = True,
+    include_provenance: Annotated[
+        bool,
+        Field(description="Include provenance metadata for each signal (default: true)."),
+    ] = True,
+    tenant_id: Annotated[str | None, Field(description="Optional tenant ID.")] = None,
+) -> str:
+    """Compute Deployment Confidence Scores for one or more VM SKUs.
+
+    Fetches all required signals (quotas, zones, restrictions, pricing,
+    optionally spot placement scores) and returns a deterministic
+    confidence score (0\u2013100) with label for each SKU.
+
+    This is the **canonical scoring endpoint** \u2013 the same module powers
+    the web UI, MCP server, and REST API.
+
+    Set ``prefer_spot`` to ``True`` to include Spot Placement Scores
+    in the calculation (produces ``scoreType: 'basic+spot'``).
+    Without it, only basic signals are used (``scoreType: 'basic'``).
+
+    Use ``include_signals`` and ``include_provenance`` to control
+    response verbosity for conversational contexts.
+    """
+    all_skus = azure_api.get_skus(region, subscription_id, tenant_id, "virtualMachines")
+    azure_api.enrich_skus_with_quotas(all_skus, region, subscription_id, tenant_id)
+    azure_api.enrich_skus_with_prices(all_skus, region, currency_code)
+    sku_map = {s["name"]: s for s in all_skus}
+
+    # Optionally fetch spot placement scores
+    spot_scores: dict[str, dict[str, str]] = {}
+    warnings: list[str] = []
+    if prefer_spot:
+        try:
+            spot_result = azure_api.get_spot_placement_scores(
+                region, subscription_id, skus, instance_count, tenant_id
+            )
+            spot_scores = spot_result.get("scores", {})
+        except Exception:
+            logger.warning("Spot placement score fetch failed; continuing without spot")
+            warnings.append("Spot placement scores unavailable")
+
+    results: list[dict] = []
+    errors: list[str] = []
+    for sku_name in skus:
+        sku_data = sku_map.get(sku_name)
+        if sku_data is None:
+            errors.append(f"SKU '{sku_name}' not found in region '{region}'")
+            continue
+
+        sku_spot_zones = spot_scores.get(sku_name, {})
+        spot_label = best_spot_label(sku_spot_zones)
+        if prefer_spot and sku_spot_zones and spot_label is None:
+            warnings.append(
+                f"Spot data for '{sku_name}' returned non-scorable values; "
+                "excluded from confidence."
+            )
+        elif prefer_spot and not sku_spot_zones and not warnings:
+            warnings.append(f"No Spot Placement Score data available for '{sku_name}'.")
+
+        sig = signals_from_sku(sku_data, spot_score_label=spot_label)
+        result = compute_deployment_confidence(sig)
+
+        exclude: set[str] = set()
+        if not include_provenance:
+            exclude.add("provenance")
+
+        entry: dict = {
+            "sku": sku_name,
+            "deploymentConfidence": result.model_dump(exclude=exclude),
+        }
+        if include_signals:
+            entry["rawSignals"] = sig.model_dump()
+        results.append(entry)
+
+    return json.dumps(
+        {
+            "region": region,
+            "subscriptionId": subscription_id,
+            "results": results,
+            "warnings": warnings,
+            "errors": errors,
+        },
+        indent=2,
+    )
 
 
 @mcp.tool()
