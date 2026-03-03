@@ -367,10 +367,10 @@ async function sendChatMessage() {
                     assistantBubble.closest(".chat-message")?.classList.remove("is-thinking");
                     _scrollChatBottom();
                 } else if (payload.type === "tool_call") {
-                    _appendToolStatus(assistantBubble, payload.name, "calling", payload.arguments);
+                    _appendToolStatus(assistantBubble.closest(".chat-message"), payload.name, "calling", payload.arguments);
                     _scrollChatBottom();
                 } else if (payload.type === "tool_result") {
-                    _updateToolStatus(assistantBubble, payload.name, "done");
+                    _updateToolStatus(assistantBubble.closest(".chat-message"), payload.name, "done", payload.arguments, payload.content);
                     _scrollChatBottom();
                 } else if (payload.type === "ui_action") {
                     _handleChatUiAction(payload);
@@ -493,44 +493,133 @@ function _navigateChatHistory(direction, e) {
     input.setSelectionRange(input.value.length, input.value.length);
 }
 
-function _appendToolStatus(bubble, toolName, status, argsJson) {
-    let toolsDiv = bubble.querySelector(".chat-tool-calls");
+function _appendToolStatus(msgDiv, toolName, status, argsJson) {
+    let toolsDiv = msgDiv.querySelector(".chat-tool-calls");
     if (!toolsDiv) {
         toolsDiv = document.createElement("div");
         toolsDiv.className = "chat-tool-calls";
-        bubble.insertBefore(toolsDiv, bubble.firstChild);
+        // Insert before the bubble so innerHTML changes never affect it
+        const bubble = msgDiv.querySelector(".chat-bubble");
+        msgDiv.insertBefore(toolsDiv, bubble);
     }
     const badge = document.createElement("span");
     badge.className = "chat-tool-badge calling";
     badge.dataset.tool = toolName;
     const friendlyName = toolName.replace(/_/g, " ");
     badge.innerHTML = `<i class="bi bi-gear-fill spin"></i> ${escapeHtml(friendlyName)}`;
-    // Store arguments for tooltip
+    // Store arguments for later inspection
     if (argsJson) {
-        try {
-            const parsed = typeof argsJson === "string" ? JSON.parse(argsJson) : argsJson;
-            const lines = Object.entries(parsed)
-                .map(([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`)
-                .join("\n");
-            badge.title = lines;
-            badge.style.cursor = "help";
-        } catch { /* ignore parse errors */ }
+        badge.dataset.toolArgs = typeof argsJson === "string" ? argsJson : JSON.stringify(argsJson);
     }
     toolsDiv.appendChild(badge);
 }
 
-function _updateToolStatus(bubble, toolName, status) {
-    const badge = bubble.querySelector(`.chat-tool-badge[data-tool="${toolName}"]`);
-    if (badge) {
-        badge.className = `chat-tool-badge ${status}`;
-        const friendlyName = toolName.replace(/_/g, " ");
-        badge.innerHTML = `<i class="bi bi-check-circle-fill"></i> ${escapeHtml(friendlyName)}`;
+function _updateToolStatus(msgDiv, toolName, status, argsJson, contentStr) {
+    const badge = msgDiv.querySelector(`.chat-tool-badge[data-tool="${toolName}"]`);
+    if (!badge) return;
+    badge.className = `chat-tool-badge ${status}`;
+    const friendlyName = toolName.replace(/_/g, " ");
+    badge.innerHTML = `<i class="bi bi-check-circle-fill"></i> ${escapeHtml(friendlyName)}`;
+    // Store final arguments (may include auto-injected params) and result content
+    if (argsJson) {
+        badge.dataset.toolArgs = typeof argsJson === "string" ? argsJson : JSON.stringify(argsJson);
     }
+    if (contentStr) {
+        badge.dataset.toolContent = contentStr;
+    }
+    // Make completed badges clickable for inspection
+    badge.style.cursor = "pointer";
+    badge.title = "Click to inspect tool input/output";
+    badge.addEventListener("click", () => _showToolDetailModal(toolName, badge.dataset.toolArgs, badge.dataset.toolContent));
 }
 
 function _scrollChatBottom() {
     const container = document.getElementById("chat-messages");
     if (container) container.scrollTop = container.scrollHeight;
+}
+
+/** Show a modal with tool input (arguments) and output (result) details. */
+function _showToolDetailModal(toolName, argsJson, contentStr) {
+    const modalId = "toolDetailModal";
+    let modal = document.getElementById(modalId);
+    if (!modal) {
+        modal = document.createElement("div");
+        modal.className = "modal fade";
+        modal.id = modalId;
+        modal.tabIndex = -1;
+        modal.setAttribute("aria-labelledby", "toolDetailModalLabel");
+        modal.setAttribute("aria-hidden", "true");
+        modal.innerHTML = `
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="toolDetailModalLabel"></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h6 class="text-muted mb-1"><i class="bi bi-box-arrow-in-right"></i> Input</h6>
+                        <div class="tool-detail-wrap">
+                            <button class="btn btn-sm tool-copy-btn" data-target="toolDetailInput" title="Copy input">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                            <pre class="tool-detail-pre" id="toolDetailInput"></pre>
+                        </div>
+                        <h6 class="text-muted mb-1 mt-3"><i class="bi bi-box-arrow-right"></i> Output</h6>
+                        <div class="tool-detail-wrap">
+                            <button class="btn btn-sm tool-copy-btn" data-target="toolDetailOutput" title="Copy output">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                            <pre class="tool-detail-pre" id="toolDetailOutput"></pre>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        // Wire up copy buttons
+        modal.querySelectorAll(".tool-copy-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const pre = modal.querySelector(`#${btn.dataset.target}`);
+                if (!pre) return;
+                navigator.clipboard.writeText(pre.textContent).then(() => {
+                    btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+                    setTimeout(() => { btn.innerHTML = '<i class="bi bi-clipboard"></i>'; }, 1500);
+                });
+            });
+        });
+    }
+    // Populate content
+    const friendlyName = toolName.replace(/_/g, " ");
+    modal.querySelector("#toolDetailModalLabel").textContent = `MCP tool \u2013 ${friendlyName}`;
+    const inputEl = modal.querySelector("#toolDetailInput");
+    const outputEl = modal.querySelector("#toolDetailOutput");
+    // Format input arguments
+    try {
+        const parsed = argsJson ? JSON.parse(argsJson) : {};
+        inputEl.innerHTML = _highlightJson(JSON.stringify(parsed, null, 2));
+    } catch {
+        inputEl.textContent = argsJson || "(none)";
+    }
+    // Format output content
+    try {
+        const parsed = contentStr ? JSON.parse(contentStr) : null;
+        outputEl.innerHTML = parsed ? _highlightJson(JSON.stringify(parsed, null, 2)) : escapeHtml(contentStr || "(no output)");
+    } catch {
+        outputEl.textContent = contentStr || "(no output)";
+    }
+    // Show the modal
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+}
+
+/** Highlight a JSON string using highlight.js (falls back to escaped plain text). */
+function _highlightJson(jsonStr) {
+    if (typeof hljs !== "undefined") {
+        return hljs.highlight(jsonStr, { language: "json" }).value;
+    }
+    return escapeHtml(jsonStr);
 }
 
 /** Handle UI actions emitted by the chat backend (e.g. tenant/region switching). */
