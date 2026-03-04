@@ -12,6 +12,7 @@ from az_scout import azure_api
 from az_scout.scoring.deployment_confidence import (
     best_spot_label,
     compute_deployment_confidence,
+    enrich_skus_with_confidence,
     signals_from_sku,
 )
 
@@ -105,9 +106,7 @@ def get_sku_availability(
     if include_prices:
         azure_api.enrich_skus_with_prices(result, region, currency_code)
 
-    for sku in result:
-        sig = signals_from_sku(sku)
-        sku["confidence"] = compute_deployment_confidence(sig).model_dump()
+    enrich_skus_with_confidence(result)
 
     return json.dumps(result, indent=2)
 

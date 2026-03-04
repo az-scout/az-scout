@@ -14,6 +14,7 @@ from az_scout.models.deployment_plan import DeploymentIntentRequest
 from az_scout.scoring.deployment_confidence import (
     best_spot_label,
     compute_deployment_confidence,
+    enrich_skus_with_confidence,
     signals_from_sku,
 )
 from az_scout.services.deployment_planner import plan_deployment
@@ -92,9 +93,7 @@ async def get_skus(
         if includePrices:
             await asyncio.to_thread(azure_api.enrich_skus_with_prices, skus, region, currencyCode)
 
-        for sku in skus:
-            sig = signals_from_sku(sku)
-            sku["confidence"] = compute_deployment_confidence(sig).model_dump()
+        enrich_skus_with_confidence(skus)
 
         return JSONResponse(skus)
     except Exception as exc:
