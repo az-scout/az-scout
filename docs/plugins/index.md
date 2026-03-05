@@ -13,6 +13,14 @@ az-scout supports plugins — pip-installable Python packages that extend the ap
 
 ---
 
+### Plugin manager
+
+The plugin manager UI shows all discovered plugins, both built-in and external. You can install new plugins without leaving the app
+
+![Plugin manager UI showing a list of installed plugins with install/uninstall buttons](../assets/screenshots/plugin-manager.png){ .screenshot }
+
+---
+
 ## Quick start
 
 ```bash
@@ -227,10 +235,8 @@ def test_my_plugin() -> None:
 
 ## Known Plugins
 
-| Plugin | Description |
-|--------|-------------|
-| [az-scout-plugin-batch-sku](https://github.com/lrivallain/az-scout-plugin-batch-sku) | Azure Batch SKU availability |
-| [az-scout-plugin-latency-stats](https://github.com/lrivallain/az-scout-plugin-latency-stats) | Inter-region latency statistics |
-| [az-scout-plugin-strategy-advisor](https://github.com/lrivallain/az-scout-plugin-strategy-advisor) | *(WIP)* Multi-region capacity strategy |
+--8<--
+docs/_includes/known-plugins.md
+--8<--
 
 See the [scaffold reference](scaffold.md) for the complete starter template.

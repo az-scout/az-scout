@@ -4,7 +4,7 @@ This guide walks through creating an Entra ID App Registration and configuring E
 
 ## Quick start (recommended)
 
-The [`setup-easyauth.sh`](setup-easyauth.sh) script automates all the steps below. It is **idempotent** — it detects existing configuration at every step and only creates what is missing, so it is safe to re-run at any time.
+The [`setup-easyauth.sh`](https://github.com/lrivallain/az-scout/blob/main/deploy/setup-easyauth.sh) script automates all the steps below. It is **idempotent** — it detects existing configuration at every step and only creates what is missing, so it is safe to re-run at any time.
 
 The script works in **two phases** because the Container App URL is only known after deployment:
 
@@ -76,7 +76,7 @@ The sections below document each manual step for reference or troubleshooting.
 ### Prerequisites
 
 - Azure CLI (`az`) authenticated with permissions to create App Registrations
-- An already-deployed az-scout Container App (see [main README](../README.md#deploy-to-azure-container-app))
+- An already-deployed az-scout Container App (see [main README](https://github.com/lrivallain/az-scout/blob/main/README.md#deploy-to-azure-container-app))
 - Your Container App URL (e.g. `https://az-scout.<env>.<region>.azurecontainerapps.io`)
 
 ### 1. Set variables
@@ -190,7 +190,7 @@ az rest --method POST \
 | "Assignment required?" toggle is greyed out in the portal | Use the CLI command in step 6 instead |
 | `Resource does not exist` when querying the SP | Create it first with `az ad sp create --id $APP_ID` |
 | `AADSTS65001: The user or administrator has not consented to use the application` | The App Registration must expose an API and pre-authorize the Azure CLI — see [step 7](#7-connect-mcp-clients-through-easyauth) |
-| VS Code asks "Enter an existing client ID" with redirect URIs | Enter your az-scout App Registration client ID, then add those redirect URIs and enable public client flows — see [VS Code interactive login](#vs-code-copilot-recommended--interactive-login) |
+| VS Code asks "Enter an existing client ID" with redirect URIs | Enter your az-scout App Registration client ID, then add those redirect URIs and enable public client flows — see the "VS Code Copilot (recommended – interactive login)" section below |
 | 401 Unauthorized with valid token | Ensure the `openIdIssuer` does **not** end with `/v2.0` — the Azure CLI issues v1 tokens. Use `https://login.microsoftonline.com/<TENANT_ID>/` |
 | 403 Forbidden with valid token | Remove `defaultAuthorizationPolicy.allowedApplications` from the auth config if empty, or explicitly add the Azure CLI app ID (`04b07795-8ddb-461a-bbee-02f9e1bf7b46`) |
 

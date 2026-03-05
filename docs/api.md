@@ -1,3 +1,7 @@
+---
+description: "REST API reference for az-scout: discovery, topology, planner, scoring, and plugin management endpoints."
+---
+
 # API Reference
 
 az-scout exposes a REST API backed by FastAPI. Interactive documentation is available at runtime:
@@ -12,6 +16,20 @@ az-scout exposes a REST API backed by FastAPI. Interactive documentation is avai
 ### `GET /api/tenants`
 
 List Azure AD tenants accessible with the current credentials.
+
+=== "curl"
+
+    ```bash
+    curl http://localhost:5001/api/tenants
+    ```
+
+=== "httpx (Python)"
+
+    ```python
+    import httpx
+    r = httpx.get("http://localhost:5001/api/tenants")
+    print(r.json())
+    ```
 
 **Response:**
 
@@ -36,6 +54,12 @@ List enabled Azure subscriptions.
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `tenantId` | `string` *(optional)* | Scope to a specific tenant |
+
+=== "curl"
+
+    ```bash
+    curl "http://localhost:5001/api/subscriptions?tenantId=00000000-..."
+    ```
 
 **Response:**
 
@@ -124,12 +148,60 @@ Get VM SKU availability per zone for a region and subscription.
 | `family` | `string` *(optional)* | SKU family substring filter |
 | `minVcpus` / `maxVcpus` | `integer` *(optional)* | vCPU count range |
 | `minMemoryGb` / `maxMemoryGb` | `float` *(optional)* | Memory range in GB |
+| `includePrices` | `boolean` *(optional)* | Include retail pricing (default: `false`) |
+| `currencyCode` | `string` *(optional)* | Currency code (default: `USD`) |
+
+=== "curl"
+
+    ```bash
+    curl "http://localhost:5001/api/skus?region=westeurope&subscriptionId=xxx&name=D4s&includePrices=true"
+    ```
+
+=== "curl (filtered)"
+
+    ```bash
+    # 4-8 vCPU D-series VMs with pricing
+    curl "http://localhost:5001/api/skus?region=eastus&subscriptionId=xxx&family=DSv5&minVcpus=4&maxVcpus=8&includePrices=true"
+    ```
+
+**Response (truncated):**
+
+```json
+[
+  {
+    "name": "Standard_D4s_v5",
+    "tier": "Standard",
+    "family": "standardDSv5Family",
+    "zones": ["1", "2", "3"],
+    "restrictions": [],
+    "capabilities": { "vCPUs": "4", "MemoryGB": "16" },
+    "quota": { "limit": 350, "used": 48, "remaining": 302 },
+    "pricing": { "paygo": 0.192, "spot": 0.0384, "currency": "USD" },
+    "confidence": { "score": 88, "label": "High", "scoreType": "basic" }
+  }
+]
+```
 
 ---
 
 ### `POST /api/deployment-confidence`
 
 Compute Deployment Confidence Scores for one or more SKUs.
+
+=== "curl"
+
+    ```bash
+    curl -X POST http://localhost:5001/api/deployment-confidence \
+      -H 'Content-Type: application/json' \
+      -d '{
+        "region": "westeurope",
+        "subscriptionId": "xxx",
+        "skus": ["Standard_D4s_v5", "Standard_E4s_v5"],
+        "preferSpot": false,
+        "instanceCount": 3,
+        "includeSignals": true
+      }'
+    ```
 
 **Request body:**
 

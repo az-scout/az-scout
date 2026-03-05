@@ -9,6 +9,8 @@
 
 Scout Azure regions for VM availability, zone mappings, pricing, spot scores, and quota — then plan deployments with confidence.
 
+📖 **Full documentation:** [lrivallain.github.io/az-scout](https://lrivallain.github.io/az-scout/)
+
 > **az-scout** helps you compare how Azure maps logical Availability Zones to physical zones across subscriptions, evaluate SKU capacity and pricing, and generate deterministic deployment plans — all from a single web UI or MCP-powered AI agent.
 
 
@@ -164,7 +166,7 @@ az deployment group create -g rg-az-scout -f deploy/main.bicep \
 ./deploy/setup-easyauth.sh --resource-group rg-az-scout --enable-mcp --enable-vscode
 ```
 
-For a complete manual walkthrough, troubleshooting, and MCP client configuration, see [`deploy/EASYAUTH.md`](deploy/EASYAUTH.md).
+For a complete manual walkthrough, troubleshooting, and MCP client configuration, see [`docs/deployment/easyauth.md`](docs/deployment/easyauth.md).
 
 ## Usage
 
@@ -278,7 +280,7 @@ Add to your MCP client configuration:
 
 > **Hosted deployment:** When running as a Container App (or any hosted web server), the MCP endpoint is automatically available at `/mcp` alongside the web UI — no separate server needed. Point your MCP client to `https://<your-app-url>/mcp`.
 >
-> **EasyAuth:** If your Container App has EasyAuth enabled, MCP clients must pass a bearer token in the `Authorization` header. See the [EasyAuth guide](deploy/EASYAUTH.md#7-connect-mcp-clients-through-easyauth) for detailed instructions.
+> **EasyAuth:** If your Container App has EasyAuth enabled, MCP clients must pass a bearer token in the `Authorization` header. See the [EasyAuth guide](docs/deployment/easyauth.md#7-connect-mcp-clients-through-easyauth) for detailed instructions.
 
 ### API
 

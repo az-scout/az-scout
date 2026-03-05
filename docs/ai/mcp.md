@@ -1,3 +1,7 @@
+---
+description: "Connect AI agents (Claude, VS Code Copilot) to az-scout via the Model Context Protocol (MCP) server."
+---
+
 # MCP Server
 
 az-scout includes a full [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that exposes all capabilities as tools for AI agents.
@@ -113,7 +117,7 @@ For a hosted Container App deployment, point to `https://<your-app-url>/mcp`.
 
 When running as a Container App with Entra ID authentication (EasyAuth) enabled, MCP clients must pass a bearer token in the `Authorization` header.
 
-See the [EasyAuth guide](https://github.com/lrivallain/az-scout/blob/main/deploy/EASYAUTH.md#7-connect-mcp-clients-through-easyauth) for detailed configuration instructions.
+See the [EasyAuth guide](../deployment/easyauth.md#7-connect-mcp-clients-through-easyauth) for detailed configuration instructions.
 
 ---
 

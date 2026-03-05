@@ -2,11 +2,11 @@
 hide:
   - navigation
   - toc
+description: "Scout Azure regions for VM availability, zone mappings, pricing, spot scores, and quota — then plan deployments with confidence."
 ---
 
-# az-scout
-
-<div align="center">
+<div align="center" markdown>
+# Azure Scout
 
 [![CI](https://github.com/lrivallain/az-scout/actions/workflows/ci.yml/badge.svg)](https://github.com/lrivallain/az-scout/actions/workflows/ci.yml)
 [![Publish to PyPI](https://github.com/lrivallain/az-scout/actions/workflows/publish.yml/badge.svg)](https://github.com/lrivallain/az-scout/actions/workflows/publish.yml)
@@ -18,7 +18,6 @@ hide:
 
 [Get Started](getting-started.md){ .md-button .md-button--primary }
 [View on GitHub](https://github.com/lrivallain/az-scout){ .md-button }
-
 </div>
 
 ---
@@ -33,6 +32,11 @@ hide:
 - *Which deployment plan gives me the best confidence score across zones?*
 
 All from a single web UI — or through an MCP-powered AI agent connected to your favourite tools (Claude, VS Code Copilot, etc.).
+
+<div align="center" markdown>
+<!-- Hero screenshot: AZ Topology graph + Planner table side by side -->
+![az-scout web UI showing zone mappings and SKU availability](assets/screenshots/hero.png){ .screenshot }
+</div>
 
 ---
 
@@ -78,7 +82,7 @@ All from a single web UI — or through an MCP-powered AI agent connected to you
 
     All capabilities exposed as [Model Context Protocol](https://modelcontextprotocol.io/) tools. Connect Claude Desktop, VS Code Copilot, or any MCP-compatible AI agent.
 
-    [:octicons-arrow-right-24: Learn more](mcp.md)
+    [:octicons-arrow-right-24: Learn more](ai/mcp.md)
 
 -   :material-puzzle:{ .lg .middle } **Plugin System**
 
@@ -127,11 +131,7 @@ Your browser opens automatically at `http://127.0.0.1:5001`.
 
 ## Known Plugins
 
-| Plugin | Description |
-|--------|-------------|
-| [az-scout-plugin-batch-sku](https://github.com/lrivallain/az-scout-plugin-batch-sku) | Azure Batch SKU availability — discover and compare Batch-supported VM SKUs per region |
-| [az-scout-plugin-latency-stats](https://github.com/lrivallain/az-scout-plugin-latency-stats) | Inter-region latency statistics — D3.js graph visualisation of pairwise RTT between Azure regions |
-| [az-scout-plugin-strategy-advisor](https://github.com/lrivallain/az-scout-plugin-strategy-advisor) | *(WIP)* Multi-region capacity strategy recommendation engine |
+--8<-- "docs/_includes/known-plugins.md"
 
 [Develop your own plugin →](plugins/index.md){ .md-button }
 

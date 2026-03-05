@@ -1,3 +1,7 @@
+---
+description: "Example prompts for using az-scout's AI chat assistant and MCP tools with Claude, Copilot, and other LLMs."
+---
+
 # Prompt examples
 
 Example natural-language prompts you can use with an AI agent (Claude, Copilot, etc.) connected to the az-scout MCP server.

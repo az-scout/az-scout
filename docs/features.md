@@ -1,3 +1,7 @@
+---
+description: "Explore az-scout's built-in features: zone mapping, SKU availability, Spot scores, deployment confidence, AI chat, and plugins."
+---
+
 # Features
 
 An overview of az-scout's built-in capabilities.
@@ -18,6 +22,9 @@ Azure assigns logical zone numbers (1, 2, 3) independently per subscription. Two
 
 **Powered by:** `availabilityZoneMappings` from the Azure ARM `/subscriptions/{id}/locations` endpoint.
 
+<!-- Screenshot: D3 bipartite graph showing logical zones → physical zones -->
+![Zone mapping graph showing subscription-to-physical-zone relationships](assets/screenshots/topology-graph.png){ .screenshot }
+
 ---
 
 ## SKU Availability
@@ -34,6 +41,9 @@ View VM SKU availability per physical zone, with real-time quota and restriction
 
 **Powered by:** `/subscriptions/{id}/providers/Microsoft.Compute/skus` (with zone restrictions and capabilities) and `/subscriptions/{id}/providers/Microsoft.Compute/locations/{region}/usages` (quota, cached 10 minutes).
 
+<!-- Screenshot: SKU table with filters, zone icons, quota bars, confidence badges -->
+![SKU availability table with per-zone status and confidence scores](assets/screenshots/planner-table.png){ .screenshot }
+
 ---
 
 ## Spot Placement Scores
@@ -49,6 +59,9 @@ Spot Placement Scores reflect the *probability* of obtaining a Spot VM allocatio
 - Factor Spot scores into your deployment confidence assessment.
 
 **Powered by:** `/subscriptions/{id}/providers/Microsoft.Compute/locations/{region}/placementScores/spot/generate` (batched in chunks of 100, cached 10 minutes).
+
+<!-- Screenshot: Spot score modal with per-zone High/Medium/Low badges -->
+![Spot placement score modal showing per-zone allocation likelihood](assets/screenshots/spot-modal.png){ .screenshot }
 
 ---
 
@@ -69,6 +82,9 @@ The score synthesises multiple signals, weighted by importance:
 Scores below certain thresholds are labelled **Blocked** when a knockout condition fires (quota exhausted, SKU restricted in all zones, etc.).
 
 See the [Scoring Reference](scoring.md) for the full algorithm and all thresholds.
+
+<!-- Screenshot: Pricing/confidence detail modal with breakdown table -->
+![SKU detail modal with confidence breakdown and VM profile](assets/screenshots/pricing-modal.png){ .screenshot }
 
 ---
 
@@ -103,6 +119,9 @@ An optional chat panel powered by **Azure OpenAI** with streaming responses, too
 The assistant has access to all az-scout MCP tools and can answer questions like:
 *"Which VM SKU gives me the best confidence score in West Europe with 4 vCPUs?"*
 
+<!-- Screenshot -->
+![AI Chat Assistant](assets/screenshots/ai-chat.png){ .screenshot }
+
 ---
 
 ## Plugin System
@@ -118,10 +137,9 @@ Plugins are discovered automatically at startup via Python entry points — no c
 
 See the [Plugin Development Guide](plugins/index.md) for full details and the [scaffold](plugins/scaffold.md) reference.
 
+<!-- Screenshot -->
+![Plugin manager](assets/screenshots/plugin-manager.png){ .screenshot }
+
 ### Known Plugins
 
-| Plugin | Description |
-|--------|-------------|
-| [az-scout-plugin-batch-sku](https://github.com/lrivallain/az-scout-plugin-batch-sku) | Azure Batch SKU availability — discover and compare Batch-supported VM SKUs per region |
-| [az-scout-plugin-latency-stats](https://github.com/lrivallain/az-scout-plugin-latency-stats) | Inter-region latency statistics — D3.js graph visualisation of pairwise RTT between Azure regions |
-| [az-scout-plugin-strategy-advisor](https://github.com/lrivallain/az-scout-plugin-strategy-advisor) | *(WIP)* Multi-region capacity strategy recommendation engine |
+--8<-- "docs/_includes/known-plugins.md"

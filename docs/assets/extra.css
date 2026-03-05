@@ -1,0 +1,8 @@
+/* Screenshot images — bordered, rounded, with shadow */
+img.screenshot {
+    border: 1px solid var(--md-default-fg-color--lightest);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    margin: 1rem 0;
+    max-width: 100%;
+}

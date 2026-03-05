@@ -1,4 +1,4 @@
-site_name: az-scout
+site_name: Azure Scout
 site_description: Scout Azure regions for VM availability, zone mappings, pricing, spot scores, and quota — then plan deployments with confidence.
 site_url: https://lrivallain.github.io/az-scout/
 repo_url: https://github.com/lrivallain/az-scout
@@ -40,6 +40,15 @@ theme:
 plugins:
   - search
 
+hooks:
+  - tools/docs_hooks/copy_changelog.py
+
+watch:
+  - docs
+  - mkdocs.yml
+  - tools/docs_hooks
+  - CHANGELOG.md
+
 markdown_extensions:
   - admonition
   - attr_list
@@ -55,8 +64,14 @@ markdown_extensions:
       line_spans: __span
       pygments_lang_class: true
   - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.superfences
+  - pymdownx.snippets:
+      base_path: [docs, .]
+      restrict_base_path: false
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.emoji:
@@ -67,14 +82,20 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Features: features.md
-  - MCP Server: mcp.md
+  - AI Integration:
+    - MCP server: ai/mcp.md
+    - Prompt Examples: ai/prompts.md
+  - Scoring: scoring.md
   - API Reference: api.md
+  - Deployment:
+    - ACA Deployment: deployment/aca.md
+    - EasyAuth Guide: deployment/easyauth.md
+  - Architecture: architecture.md
   - Plugins:
     - plugins/index.md
     - Scaffold Reference: plugins/scaffold.md
-  - Scoring: scoring.md
-  - Prompt Examples: prompts.md
-  - Changelog: changelog.md
+    - Catalog: plugins/catalog.md
+  - Changelog: _changelog.md
 
 extra:
   social:
@@ -83,10 +104,11 @@ extra:
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/az-scout/
 
+extra_css:
+  - assets/extra.css
+
 docs_dir: docs
 site_dir: site
 exclude_docs: |
-  SCORING.md
-  PROMPTS.md
-  plugins.md
   plugin-scaffold/**
+  _includes/**

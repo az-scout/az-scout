@@ -1,3 +1,7 @@
+---
+description: "Install az-scout and start exploring Azure Availability Zones, VM SKUs, and deployment confidence in minutes."
+---
+
 # Getting Started
 
 This guide covers everything you need to install and run az-scout.
@@ -15,48 +19,83 @@ This guide covers everything you need to install and run az-scout.
 
 ## Installation
 
-### Recommended: `uv` (no install required)
+=== "uv (recommended)"
 
-[uv](https://docs.astral.sh/uv/) lets you run az-scout directly without a system-wide install:
-
-```bash
-# Authenticate to Azure first
-az login
-
-# Launch — uv downloads az-scout automatically
-uvx az-scout
-```
-
-Your browser opens at `http://127.0.0.1:5001` automatically.
-
-### `pip` install
-
-```bash
-pip install az-scout
-az-scout
-```
-
-### Docker
-
-```bash
-docker run --rm -p 8000:8000 \
-  -e AZURE_TENANT_ID=<your-tenant> \
-  -e AZURE_CLIENT_ID=<your-sp-client-id> \
-  -e AZURE_CLIENT_SECRET=<your-sp-secret> \
-  ghcr.io/lrivallain/az-scout:latest
-```
-
-### Dev Container
-
-A [Dev Container](https://containers.dev/) configuration is included. Requires Docker and VS Code with the [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension.
-
-1. Open the repository in VS Code.
-2. Select **Reopen in Container**.
-3. Run:
+    [uv](https://docs.astral.sh/uv/) lets you run az-scout directly without a system-wide install:
 
     ```bash
-    uv run az-scout web --host 0.0.0.0 --port 5001 --reload --no-open -v
+    # Authenticate to Azure first
+    az login
+
+    # Launch — uv downloads az-scout automatically
+    uvx az-scout
     ```
+
+    Your browser opens at `http://127.0.0.1:5001` automatically.
+
+=== "pip"
+
+    ```bash
+    pip install az-scout
+    az-scout
+    ```
+
+=== "Docker"
+
+    ```bash
+    docker run --rm -p 8000:8000 \
+      -e AZURE_TENANT_ID=<your-tenant> \
+      -e AZURE_CLIENT_ID=<your-sp-client-id> \
+      -e AZURE_CLIENT_SECRET=<your-sp-secret> \
+      ghcr.io/lrivallain/az-scout:latest
+    ```
+
+=== "Dev Container"
+
+    A [Dev Container](https://containers.dev/) configuration is included. Requires Docker and VS Code with the [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension.
+
+    1. Open the repository in VS Code.
+    2. Select **Reopen in Container**.
+    3. Run:
+
+        ```bash
+        uv run az-scout web --host 0.0.0.0 --port 5001 --reload --no-open -v
+        ```
+
+=== "Azure Container App"
+
+    Deploy az-scout as a production web app in Azure using the included Bicep template: [Azure Container Apps (ACA) Deployment](deployment/aca.md)
+
+    !!! warning "Security note"
+        Do **not** expose the web UI publicly without authentication (EasyAuth, network restrictions, etc.).
+
+    **One-click via Azure Portal:**
+
+    [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Flrivallain%2Faz-scout%2Fmain%2Fdeploy%2Fmain.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Flrivallain%2Faz-scout%2Fmain%2Fdeploy%2FcreateUiDefinition.json)
+
+    **Or via Bicep CLI:**
+
+    ```bash
+    az group create -n rg-az-scout -l <your-region>
+    az deployment group create \
+      -g rg-az-scout \
+      -f deploy/main.bicep \
+      -p readerSubscriptionIds='["SUB_ID_1","SUB_ID_2"]'
+    ```
+
+    See [`deploy/main.example.bicepparam`](https://github.com/lrivallain/az-scout/blob/main/deploy/main.example.bicepparam) for all parameters.
+
+    **Resources created:**
+
+    | Resource | Purpose |
+    |----------|----------|
+    | Container App | Runs `ghcr.io/lrivallain/az-scout` |
+    | Managed Identity | `Reader` on target subscriptions |
+    | VM Contributor | For Spot Placement Scores |
+    | Log Analytics | Container logs |
+
+    **Entra ID authentication (EasyAuth):**
+    See [EasyAuth guide](deployment/easyauth.md) for a complete walkthrough.
 
 ---
 
@@ -96,60 +135,6 @@ Runs the MCP server in standalone mode.
 | `--http` | — | Use Streamable HTTP transport instead of stdio |
 | `--port INTEGER` | `8080` | Port for Streamable HTTP transport |
 | `-v, --verbose` | — | Enable verbose logging |
-
----
-
-## Deploy to Azure Container App
-
-az-scout can be deployed as a production web app in Azure using the included Bicep template.
-
-!!! warning "Security note"
-    The web UI is designed for local use. Do **not** expose it publicly without additional security measures (authentication, network restrictions, etc.).
-
-### One-click via Azure Portal
-
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Flrivallain%2Faz-scout%2Fmain%2Fdeploy%2Fmain.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Flrivallain%2Faz-scout%2Fmain%2Fdeploy%2FcreateUiDefinition.json)
-
-### Bicep CLI
-
-```bash
-# Create resource group
-az group create -n rg-az-scout -l <your-region>
-
-# Deploy (replace with your subscription IDs)
-az deployment group create \
-  -g rg-az-scout \
-  -f deploy/main.bicep \
-  -p readerSubscriptionIds='["SUB_ID_1","SUB_ID_2"]'
-```
-
-See [`deploy/main.example.bicepparam`](https://github.com/lrivallain/az-scout/blob/main/deploy/main.example.bicepparam) for all available parameters.
-
-### Resources created
-
-| Resource | Purpose |
-|----------|---------|
-| **Container App** | Runs `ghcr.io/lrivallain/az-scout` |
-| **Managed Identity** | `Reader` role on target subscriptions |
-| **VM Contributor** | `Virtual Machine Contributor` for Spot Placement Scores |
-| **Log Analytics** | Container logs and diagnostics |
-| **Container Apps Env** | Hosting environment |
-
-### Enable Entra ID authentication (EasyAuth)
-
-```bash
-# Phase 1: create App Registration before deploying
-./deploy/setup-easyauth.sh --enable-mcp
-
-# Deploy with the client credentials
-az deployment group create -g rg-az-scout -f deploy/main.bicep \
-  -p enableAuth=true -p authClientId='<id>' -p authClientSecret='<secret>'
-
-# Phase 2: add redirect URIs after deployment
-./deploy/setup-easyauth.sh --resource-group rg-az-scout --enable-mcp --enable-vscode
-```
-
-For a complete walkthrough, see [`deploy/EASYAUTH.md`](https://github.com/lrivallain/az-scout/blob/main/deploy/EASYAUTH.md).
 
 ---
 

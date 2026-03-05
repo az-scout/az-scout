@@ -1,3 +1,7 @@
+---
+description: "How the Deployment Confidence Score works: signals, weights, knockout rules, and thresholds."
+---
+
 # Deployment Confidence Scoring
 
 > Canonical implementation in
