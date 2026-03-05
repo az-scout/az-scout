@@ -9,22 +9,18 @@
 
 Scout Azure regions for VM availability, zone mappings, pricing, spot scores, and quota — then plan deployments with confidence.
 
-📖 **Full documentation:** [lrivallain.github.io/az-scout](https://lrivallain.github.io/az-scout/)
+📖 **Full documentation:** [ludovic.rivallain.fr/az-scout](https://ludovic.rivallain.fr/az-scout/)
 
-> **az-scout** helps you compare how Azure maps logical Availability Zones to physical zones across subscriptions, evaluate SKU capacity and pricing, and generate deterministic deployment plans — all from a single web UI or MCP-powered AI agent.
+**az-scout** helps Azure operators and architects answer the questions that matter when planning resilient, cost-efficient VM deployments:
 
+- *Do my subscriptions share the same physical datacenter for logical zone 1?*
+- *Which VM SKUs are available in all three zones with headroom in my quota?*
+- *What is the Spot placement likelihood for this SKU family right now?*
+- *Which deployment plan gives me the best confidence score across zones?*
 
-## Features
+All from a single web UI — or through an MCP-powered AI agent connected to your favourite tools (Claude, VS Code Copilot, etc.).
 
-- **Logical-to-physical zone mapping** – visualise how Azure maps logical Availability Zones to physical zones across subscriptions in a region.
-- **SKU availability view** – VM SKU availability per physical zone with vCPU quota usage, numeric filters, and CSV export.
-- **Spot Placement Scores** – per-SKU Spot VM allocation likelihood (High / Medium / Low) from the Azure Compute RP.
-- **Deployment Confidence Score** – composite 0–100 score per SKU estimating deployment success, synthesised from quota, spot scores, zone breadth, restrictions, and price pressure.
-- **Deployment Plan** – deterministic `POST /api/deployment-plan` endpoint returning ranked plans with business and technical views (no LLM).
-- **AI Chat Assistant** *(optional)* – chat panel powered by Azure OpenAI with streaming, tool calling, and markdown rendering. Requires Azure OpenAI environment variables.
-- **MCP server** – expose all capabilities as [MCP](https://modelcontextprotocol.io/) tools for AI agents.
-- **Plugin system** – extend az-scout with pip-installable plugins (API routes, MCP tools, UI tabs, chat modes). See [Known plugins](#known-plugins) below.
-
+![az-scout web UI showing zone mappings and SKU availability](docs/assets/screenshots/hero.png)
 
 ## Quick start
 
@@ -54,27 +50,7 @@ Your browser opens automatically at `http://127.0.0.1:5001`.
 
 az-scout can be extended with pip-installable plugins discovered automatically at startup. See [docs/PLUGINS.md](docs/PLUGINS.md) for the plugin development guide and the [scaffold](docs/plugin-scaffold/) for a ready-to-use template.
 
-### Known plugins
-
-| Plugin | Description |
-|---|---|
-| [az-scout-plugin-batch-sku](https://github.com/lrivallain/az-scout-plugin-batch-sku) | Azure Batch SKU availability — discover and compare Batch-supported VM SKUs per region |
-| [az-scout-plugin-latency-stats](https://github.com/lrivallain/az-scout-plugin-latency-stats) | Inter-region latency statistics — D3.js graph visualisation of pairwise RTT between Azure regions |
-| [az-scout-plugin-strategy-advisor](https://github.com/lrivallain/az-scout-plugin-strategy-advisor) | (WIP) Multi-region capacity strategy recommendation engine — evaluates regions, quotas, spot scores, pricing, and latency to recommend deployment strategies |
-
-### Install a plugin
-
-#### Recommended: install plugin with package manager
-
-Use the built-in plugin manager to install plugins from PyPI (with package names like `az-scout-plugin-xyz`) or from GitHub URLs.
-
-A curated list of recommended plugins is available in the Plugin Manager UI, with **one-click install**.
-
-#### Alternative: install plugin with `pip` or `uv`
-
-```bash
-uv pip install <plugin-package-name>
-```
+A **Plugin Manager** is included in the UI to view installed plugins and their details.
 
 ## Installation options
 
@@ -121,21 +97,6 @@ It is also possible to deploy az-scout as a web app in Azure using the provided 
 A Bicep template is provided to deploy az-scout as an Azure Container App with a managed identity.
 You can use the **Deploy to Azure** button above for a portal-guided experience, or use the CLI commands below.
 
-#### Bicep deploy from CLI
-
-```bash
-# Create a resource group
-az group create -n rg-az-scout -l <your-region>
-
-# Deploy (replace subscription IDs with your own)
-az deployment group create \
-  -g rg-az-scout \
-  -f deploy/main.bicep \
-  -p readerSubscriptionIds='["SUB_ID_1","SUB_ID_2"]'
-```
-
-See [`deploy/main.example.bicepparam`](deploy/main.example.bicepparam) for all available parameters.
-
 #### Resources created
 
 The deployment creates:
@@ -149,24 +110,6 @@ The deployment creates:
 | **Container Apps Env** | Hosting environment |
 
 > **Note:** The `Virtual Machine Contributor` role is required for querying Spot Placement Scores (POST endpoint). Set `enableSpotScoreRole=false` to skip this if you don't need spot scores or prefer to manage permissions manually.
-
-#### Enable Entra ID authentication (EasyAuth)
-
-The included setup script automates App Registration creation and is safe to re-run (idempotent). It works in two phases — before and after deployment:
-
-```bash
-# Phase 1: create App Registration + secret (before deploying)
-./deploy/setup-easyauth.sh --enable-mcp
-
-# Deploy with the output Client ID + Secret
-az deployment group create -g rg-az-scout -f deploy/main.bicep \
-  -p enableAuth=true -p authClientId='<id>' -p authClientSecret='<secret>' ...
-
-# Phase 2: add redirect URIs (auto-detected from resource group)
-./deploy/setup-easyauth.sh --resource-group rg-az-scout --enable-mcp --enable-vscode
-```
-
-For a complete manual walkthrough, troubleshooting, and MCP client configuration, see [`docs/deployment/easyauth.md`](docs/deployment/easyauth.md).
 
 ## Usage
 
@@ -224,75 +167,9 @@ An [MCP](https://modelcontextprotocol.io/) server is included, allowing AI agent
 
 > **Plugin tools:** Plugins can register additional MCP tools. For example, the [Strategy Advisor plugin](https://github.com/lrivallain/az-scout-plugin-strategy-advisor) adds a `capacity_strategy` tool.
 
-#### stdio transport (default – for Claude Desktop, VS Code, etc.)
-
-```bash
-az-scout mcp
-```
-
-Add to your MCP client configuration:
-
-```json
-{
-  "mcpServers": {
-    "az-scout": {
-      "command": "az-scout",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-If using `uv`:
-
-```json
-{
-  "mcpServers": {
-    "az-scout": {
-      "command": "uvx",
-      "args": ["az-scout", "mcp"]
-    }
-  }
-}
-```
-
-#### Streamable HTTP transport
-
-When running in `web` mode, the MCP server is automatically available at `/mcp` for integration with web-based clients or when running as a hosted deployment (Container App, etc.).
-
-For **MCP-only** use with Streamable HTTP transport, run:
-
-```bash
-az-scout mcp --http --port 8082
-```
-
-Add to your MCP client configuration:
-
-```json
-{
-  "mcpServers": {
-    "az-scout": {
-      "url": "http://localhost:8082/mcp" // or "https://<your-app-url>/mcp" for web command
-    }
-  }
-}
-```
-
-> **Hosted deployment:** When running as a Container App (or any hosted web server), the MCP endpoint is automatically available at `/mcp` alongside the web UI — no separate server needed. Point your MCP client to `https://<your-app-url>/mcp`.
->
-> **EasyAuth:** If your Container App has EasyAuth enabled, MCP clients must pass a bearer token in the `Authorization` header. See the [EasyAuth guide](docs/deployment/easyauth.md#7-connect-mcp-clients-through-easyauth) for detailed instructions.
-
 ### API
 
 API documentation is available at `/docs` (Swagger UI) and `/redoc` (ReDoc) when the server is running.
-
-## Under the hood
-
-The backend calls the Azure Resource Manager REST API to fetch:
-- **Zone mappings**: `availabilityZoneMappings` from `/subscriptions/{id}/locations` endpoint
-- **Resource SKUs**: SKU details from `/subscriptions/{id}/providers/Microsoft.Compute/skus` endpoint with zone restrictions and capabilities
-- **Compute Usages**: vCPU quota per VM family from `/subscriptions/{id}/providers/Microsoft.Compute/locations/{region}/usages` endpoint (cached for 10 minutes, with retry on throttling and graceful handling of 403)
-- **Spot Placement Scores**: likelihood indicators for Spot VM allocation from `/subscriptions/{id}/providers/Microsoft.Compute/locations/{region}/placementScores/spot/generate` endpoint (batched in chunks of 100, sequential execution with retry/back-off, cached for 10 minutes). Note: these scores reflect the probability of obtaining a Spot VM allocation, not datacenter capacity.
 
 ## License
 

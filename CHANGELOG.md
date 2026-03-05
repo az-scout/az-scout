@@ -5,11 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
-## [Unreleased]
+## Unreleased
 
+*To complete*
+
+## [2026.3.2] - 2026-03-05
 
 #### Added
 
+- **Documentation** - Add `mkdocs` docs based websites, hosted in GitHub Pages, with a custom theme and structure. Initial content includes:
+  - Home page with project overview and quick start guide.
+  - Detailed API reference generated from FastAPI's OpenAPI schema.
+  - Plugin development guide with architecture overview, API contract, and scaffold reference.
+  - Scoring methodology documentation explaining the confidence score components and rationale...
 - **Internal plugin architecture** – core features (AZ Topology, Deployment Planner) are now
   structured as internal plugins using the same `AzScoutPlugin` protocol as external plugins.
   Internal plugins ship inside the core package and are discovered automatically at startup.
