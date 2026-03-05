@@ -49,9 +49,37 @@
             .then(r => r.text())
             .then(html => {
                 container.innerHTML = html;
+                initPanelCollapses();
                 loadPlugins();
                 loadRecommended();
             });
+    }
+
+    function initPanelCollapses() {
+        if (!bootstrap || !bootstrap.Collapse) return;
+        const toggles = container.querySelectorAll("[data-pm-collapse-target]");
+        for (const toggle of toggles) {
+            const targetSelector = toggle.getAttribute("data-pm-collapse-target");
+            if (!targetSelector) continue;
+            const panel = container.querySelector(targetSelector);
+            if (!panel) continue;
+
+            const collapse = bootstrap.Collapse.getOrCreateInstance(panel, { toggle: false });
+
+            panel.addEventListener("shown.bs.collapse", () => {
+                toggle.setAttribute("aria-expanded", "true");
+                toggle.classList.remove("collapsed");
+            });
+            panel.addEventListener("hidden.bs.collapse", () => {
+                toggle.setAttribute("aria-expanded", "false");
+                toggle.classList.add("collapsed");
+            });
+
+            toggle.classList.add("collapsed");
+            toggle.addEventListener("click", () => {
+                collapse.toggle();
+            });
+        }
     }
 
     // ---- Data loading ----

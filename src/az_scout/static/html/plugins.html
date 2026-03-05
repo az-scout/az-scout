@@ -2,8 +2,19 @@
 <div class="d-flex flex-column gap-3">
     <!-- Add / Validate -->
     <div>
-        <div class="card">
-            <div class="card-header"><i class="bi bi-plus-circle me-1"></i>Add Plugin</div>
+        <div class="card border-info">
+            <div class="card-header p-0">
+                <button class="btn w-100 text-start text-white text-decoration-none border-0 rounded-0 py-2 px-3"
+                        id="pm-add-toggle"
+                        type="button"
+                        data-pm-collapse-target="#pm-add-collapse"
+                        aria-expanded="false"
+                        aria-controls="pm-add-collapse">
+                    <i class="bi bi-plus-circle me-1"></i>Manual plugin install
+                    <i class="bi bi-chevron-down float-end"></i>
+                </button>
+            </div>
+            <div id="pm-add-collapse" class="collapse">
             <div class="card-body">
                 <div class="mb-2">
                     <label for="pm-repo-url" class="form-label form-label-sm">Plugin source</label>
@@ -41,6 +52,7 @@
                     </div>
                     <span class="ms-2 text-body-secondary" id="pm-spinner-text">Validating…</span>
                 </div>
+            </div>
             </div>
         </div>
     </div>
@@ -86,29 +98,6 @@
         </div>
     </div>
 
-    <!-- Loaded (runtime) -->
-    <div>
-        <div class="card">
-            <div class="card-header"><i class="bi bi-lightning me-1"></i>Loaded (runtime)</div>
-            <div class="card-body p-0">
-                <div id="pm-loaded-empty" class="text-center text-body-secondary py-3">
-                    No plugins loaded in current process
-                </div>
-                <div id="pm-loaded-table-wrap" class="d-none">
-                    <table class="table table-sm table-hover mb-0" style="font-size:0.82rem;">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Version</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pm-loaded-tbody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Recommended plugins -->
     <div>
         <div class="card">
@@ -130,6 +119,38 @@
                         </thead>
                         <tbody id="pm-recommended-tbody"></tbody>
                     </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loaded (runtime) -->
+    <div>
+        <div class="card">
+            <div class="card-header p-0">
+                <button class="btn btn-link w-100 text-start text-body text-decoration-none py-2 px-3" id="pm-loaded-toggle"
+                    type="button" data-pm-collapse-target="#pm-loaded-collapse" aria-expanded="false"
+                    aria-controls="pm-loaded-collapse">
+                    <i class="bi bi-lightning me-1"></i>Loaded (runtime)
+                    <i class="bi bi-chevron-down float-end"></i>
+                </button>
+            </div>
+            <div id="pm-loaded-collapse" class="collapse">
+                <div class="card-body p-0">
+                    <div id="pm-loaded-empty" class="text-center text-body-secondary py-3">
+                        No plugins loaded in current process
+                    </div>
+                    <div id="pm-loaded-table-wrap" class="d-none">
+                        <table class="table table-sm table-hover mb-0" style="font-size:0.82rem;">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Version</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pm-loaded-tbody"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
