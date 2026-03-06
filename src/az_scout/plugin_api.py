@@ -71,3 +71,14 @@ class AzScoutPlugin(Protocol):
     def get_static_dir(self) -> Path | None: ...
     def get_tabs(self) -> list[TabDefinition] | None: ...
     def get_chat_modes(self) -> list[ChatMode] | None: ...
+
+
+@runtime_checkable
+class AzScoutPromptContributor(Protocol):
+    """Optional capability for plugins that augment the default chat system prompt.
+
+    Implement this protocol only when your plugin needs to add extra guidance
+    to the built-in ``discussion`` chat mode.
+    """
+
+    def get_system_prompt_addendum(self) -> str | None: ...

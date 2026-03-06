@@ -24,7 +24,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from az_scout.internal_plugins import discover_internal_plugins
-from az_scout.plugin_api import AzScoutPlugin, ChatMode
+from az_scout.plugin_api import AzScoutPlugin, AzScoutPromptContributor, ChatMode
 from az_scout.plugin_manager import _PACKAGES_DIR
 
 logger = logging.getLogger(__name__)
@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 _loaded_plugins: list[AzScoutPlugin] = []
 _plugin_dist_names: dict[str, str] = {}  # plugin.name → pip distribution name
 _plugin_chat_modes: dict[str, ChatMode] = {}
+_plugin_system_prompt_addenda: dict[str, str] = {}  # plugin.name → addendum text
 _plugin_mcp_tool_names: dict[str, list[str]] = {}  # plugin.name → list of MCP tool names
 _plugin_route_prefixes: set[str] = set()  # tracked prefixes for route cleanup
 
@@ -202,6 +203,18 @@ def _register_one(app: FastAPI, mcp_server: Any, plugin: AzScoutPlugin) -> None:
     except Exception:
         logger.exception("Failed to register chat modes for plugin '%s'", name)
 
+    # Optional base system prompt addendum
+    try:
+        if isinstance(plugin, AzScoutPromptContributor):
+            addendum = plugin.get_system_prompt_addendum()
+            if addendum:
+                normalized_addendum = addendum.strip()
+                if normalized_addendum:
+                    _plugin_system_prompt_addenda[name] = normalized_addendum
+                    logger.info("Registered system prompt addendum for plugin '%s'", name)
+    except Exception:
+        logger.exception("Failed to register system prompt addendum for plugin '%s'", name)
+
 
 def get_loaded_plugins() -> list[AzScoutPlugin]:
     """Return the list of plugins loaded at startup."""
@@ -211,6 +224,14 @@ def get_loaded_plugins() -> list[AzScoutPlugin]:
 def get_plugin_chat_modes() -> dict[str, ChatMode]:
     """Return all chat modes contributed by plugins, keyed by mode ID."""
     return dict(_plugin_chat_modes)
+
+
+def get_plugin_system_prompt_addenda() -> list[str]:
+    """Return registered base-system-prompt addenda from plugins.
+
+    The list is sorted by plugin name for deterministic prompt assembly.
+    """
+    return [text for _, text in sorted(_plugin_system_prompt_addenda.items())]
 
 
 # ---------------------------------------------------------------------------
@@ -250,6 +271,7 @@ def _unregister_all(app: FastAPI, mcp_server: Any) -> None:
     _loaded_plugins.clear()
     _plugin_dist_names.clear()
     _plugin_chat_modes.clear()
+    _plugin_system_prompt_addenda.clear()
     _plugin_mcp_tool_names.clear()
     _plugin_route_prefixes.clear()
 

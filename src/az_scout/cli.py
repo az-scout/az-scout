@@ -7,6 +7,8 @@ Provides two subcommands:
 Running ``az-scout`` without a subcommand defaults to ``web``.
 """
 
+from pathlib import Path
+
 import click
 
 from az_scout import __version__
@@ -151,3 +153,69 @@ def mcp(http: bool, port: int, verbose: bool) -> None:
         mcp_server.run(transport="streamable-http")
     else:
         mcp_server.run(transport="stdio")
+
+
+@cli.command("create-plugin")
+@click.option("--name", "display_name", help="Plugin display name.")
+@click.option(
+    "--slug",
+    "plugin_slug",
+    help="Plugin slug in kebab-case (without az-scout- prefix).",
+)
+@click.option(
+    "--package",
+    "package_name",
+    help="Python package name (for example az-scout-myplugin).",
+)
+@click.option("--github-owner", help="GitHub owner or organization.")
+@click.option("--github-repo", help="GitHub repository name.")
+@click.option(
+    "--output-dir",
+    type=click.Path(path_type=Path),
+    help="Output directory for the generated plugin project.",
+)
+@click.option(
+    "--no-input",
+    is_flag=True,
+    default=False,
+    help="Run without interactive prompts (uses defaults for missing values).",
+)
+@click.option(
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="Assume yes for overwrite confirmation prompts.",
+)
+@click.option(
+    "--no-rich",
+    is_flag=True,
+    default=False,
+    help="Disable Rich UI and use plain text prompts/output.",
+)
+def create_plugin(
+    display_name: str | None,
+    plugin_slug: str | None,
+    package_name: str | None,
+    github_owner: str | None,
+    github_repo: str | None,
+    output_dir: Path | None,
+    no_input: bool,
+    yes: bool,
+    no_rich: bool,
+) -> None:
+    """Scaffold a new plugin project from the bundled template."""
+    from az_scout.plugin_scaffold import create_plugin_scaffold
+
+    exit_code = create_plugin_scaffold(
+        display_name=display_name,
+        plugin_slug=plugin_slug,
+        package_name=package_name,
+        github_owner=github_owner,
+        github_repo=github_repo,
+        output_dir=output_dir,
+        non_interactive=no_input,
+        assume_yes=yes,
+        prefer_rich=not no_rich,
+    )
+    if exit_code != 0:
+        raise click.ClickException("Plugin scaffold generation failed.")

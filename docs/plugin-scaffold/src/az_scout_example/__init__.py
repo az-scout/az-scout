@@ -70,6 +70,15 @@ class ExamplePlugin:
         # ]
         return None
 
+    def get_system_prompt_addendum(self) -> str | None:
+        """Return extra guidance for the default discussion chat mode, or None."""
+        # Example:
+        # return (
+        #     "If the user references a SKU starting with 'AV' (e.g. AV64), "
+        #     "interpret it as an Azure VMware Solution (AVS) request."
+        # )
+        return None
+
 
 # Module-level instance — referenced by the entry point
 plugin = ExamplePlugin()

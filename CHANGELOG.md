@@ -7,6 +7,22 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
 ## Unreleased
 
+### Added
+
+- **Plugin creation** - `az-scout create-plugin` scaffolds a new plugin project with a Rich-powered interactive CLI experience (prompts + generation summary) and supports non-interactive usage for automation.
+- **Plugin system prompt addendum hook** – plugins can now contribute extra guidance to the default AI chat `discussion` system prompt via an optional `get_system_prompt_addendum()` capability. This enables domain-specific disambiguation (for example, interpreting `AV*` asks as AVS context) without requiring a dedicated chat mode (#93).
+- **Frontend context events for plugin authors** – core UI now emits event-driven context updates for plugin scripts:
+  - `azscout:tenants-loaded`
+  - `azscout:tenant-changed`
+  - `azscout:regions-loaded`
+  - `azscout:region-changed`
+  - `azscout:subscriptions-loaded`
+
+### Changed
+
+- **Plugin documentation simplified to event-first context integration** – removed legacy `MutationObserver`/direct DOM-watch guidance from plugin docs in favor of the new `azscout:*` event model.
+- **Plugin scaffold JS template updated** – scaffold tab script now listens to `azscout:tenant-changed` and `azscout:region-changed`, and includes an empty `azscout:subscriptions-loaded` listener as an extension point for plugin authors.
+
 ### Removed
 
 - **Deployment plan generation** – the `/api/deployment-plan` endpoint and related logic for generating deployment plans based on SKU availability and confidence scores has been removed.

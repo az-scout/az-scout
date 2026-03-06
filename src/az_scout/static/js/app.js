@@ -10,6 +10,10 @@ let subscriptions = [];                     // [{id, name}] – all subs for cur
 let regions = [];                           // [{name, displayName}]
 let tenants = [];                           // [{id, name, authenticated}]
 
+function emitContextEvent(name, detail) {
+    document.dispatchEvent(new CustomEvent(name, { detail }));
+}
+
 // ---------------------------------------------------------------------------
 // Theme management  (Bootstrap uses data-bs-theme)
 // ---------------------------------------------------------------------------
@@ -192,6 +196,11 @@ async function fetchTenants() {
             } else {
                 document.getElementById("tenant-section").classList.add("d-none");
             }
+            emitContextEvent("azscout:tenants-loaded", {
+                tenants,
+                defaultTenantId: defaultTid,
+                tenantId: select.value || "",
+            });
             return;
         }
         select.innerHTML = authTenants.map(t => {
@@ -201,12 +210,26 @@ async function fetchTenants() {
         if (defaultTid && authTenants.some(t => t.id === defaultTid)) {
             select.value = defaultTid;
         }
+        emitContextEvent("azscout:tenants-loaded", {
+            tenants,
+            defaultTenantId: defaultTid,
+            tenantId: select.value || "",
+        });
     } catch {
         document.getElementById("tenant-section").classList.add("d-none");
+        emitContextEvent("azscout:tenants-loaded", {
+            tenants: [],
+            defaultTenantId: "",
+            tenantId: "",
+        });
     }
 }
 
 async function onTenantChange() {
+    emitContextEvent("azscout:tenant-changed", {
+        tenantId: document.getElementById("tenant-select")?.value || "",
+    });
+
     // Reset all downstream state
     if (typeof topoSelectedSubs !== "undefined") topoSelectedSubs.clear();
     lastMappingData = null;
@@ -245,6 +268,10 @@ async function fetchRegions() {
 
     try {
         regions = await apiFetch("/api/regions" + tenantQS("?"));
+        emitContextEvent("azscout:regions-loaded", {
+            regions,
+            tenantId: document.getElementById("tenant-select")?.value || "",
+        });
         inp.placeholder = "Type to search regions\u2026";
         inp.disabled = false;
         renderRegionDropdown("");
@@ -326,6 +353,12 @@ function selectRegion(name) {
 }
 
 function onRegionChange() {
+    const regionName = document.getElementById("region-select")?.value || "";
+    emitContextEvent("azscout:region-changed", {
+        region: regionName,
+        tenantId: document.getElementById("tenant-select")?.value || "",
+    });
+
     // Region is shared – update both tabs
     updateTopoLoadButton();
     if (typeof resetPlannerResults === "function") resetPlannerResults();
@@ -355,6 +388,10 @@ function showPanel(prefix, state) {
 async function fetchSubscriptions() {
     try {
         subscriptions = await apiFetch("/api/subscriptions" + tenantQS("?"));
+        emitContextEvent("azscout:subscriptions-loaded", {
+            subscriptions,
+            tenantId: document.getElementById("tenant-select")?.value || "",
+        });
         if (typeof renderTopoSubList === "function") renderTopoSubList();
         if (typeof renderPlannerSubDropdown === "function") renderPlannerSubDropdown("");
     } catch (err) {

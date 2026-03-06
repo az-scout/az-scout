@@ -55,7 +55,7 @@ example = "az_scout_example:plugin"
 ## Frontend patterns
 
 - The plugin tab container is `#plugin-tab-{name}`. Load HTML fragments into it.
-- Watch `#tenant-select` and `#region-select` via `MutationObserver` / change events to react to user context changes.
+- Subscribe to `azscout:*` custom events (for tenant/region/subscription context updates).
 - Fetch subscriptions from `/api/subscriptions?tenant_id=…` when tenant changes.
 - Plugin static assets are at `/plugins/{name}/static/…`.
 

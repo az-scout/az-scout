@@ -64,6 +64,11 @@ def _build_system_prompt(
     """Build the system prompt, optionally including tenant, region and subscription context."""
     if mode == "discussion":
         prompt = SYSTEM_PROMPT
+        from az_scout.plugins import get_plugin_system_prompt_addenda
+
+        addenda = get_plugin_system_prompt_addenda()
+        if addenda:
+            prompt += "\n\nAdditional plugin guidance:\n\n" + "\n\n".join(addenda)
     else:
         # All non-discussion modes (including "planner") are plugin-contributed
         from az_scout.plugins import get_plugin_chat_modes

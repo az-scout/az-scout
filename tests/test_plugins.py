@@ -14,10 +14,12 @@ from az_scout.plugins import (
     _plugin_chat_modes,
     _plugin_mcp_tool_names,
     _plugin_route_prefixes,
+    _plugin_system_prompt_addenda,
     _unregister_all,
     discover_plugins,
     get_plugin_chat_modes,
     get_plugin_metadata,
+    get_plugin_system_prompt_addenda,
     register_plugins,
     reload_plugins,
 )
@@ -86,6 +88,9 @@ class FullPlugin:
             )
         ]
 
+    def get_system_prompt_addendum(self) -> str | None:
+        return "If a user asks about AV* SKUs, interpret it as an AVS-related request."
+
 
 class MinimalPlugin:
     """A test plugin that provides nothing (all methods return None)."""
@@ -125,11 +130,13 @@ def _clear_plugin_registries():
     """Reset module-level plugin registries between tests."""
     _loaded_plugins.clear()
     _plugin_chat_modes.clear()
+    _plugin_system_prompt_addenda.clear()
     _plugin_mcp_tool_names.clear()
     _plugin_route_prefixes.clear()
     yield
     _loaded_plugins.clear()
     _plugin_chat_modes.clear()
+    _plugin_system_prompt_addenda.clear()
     _plugin_mcp_tool_names.clear()
     _plugin_route_prefixes.clear()
 
@@ -234,6 +241,9 @@ class TestRegisterPlugins:
         modes = get_plugin_chat_modes()
         assert "test-mode" in modes
         assert modes["test-mode"].label == "Test Mode"
+
+        addenda = get_plugin_system_prompt_addenda()
+        assert addenda == ["If a user asks about AV* SKUs, interpret it as an AVS-related request."]
 
     def test_register_minimal_plugin_no_errors(self):
         minimal = MinimalPlugin()
@@ -360,6 +370,43 @@ class TestPluginChatModeIntegration:
 
         prompt = _build_system_prompt(mode="discussion")
         assert prompt.startswith(SYSTEM_PROMPT[:50])
+
+    def test_discussion_mode_includes_plugin_addenda(self):
+        from az_scout.services.ai_chat import _build_system_prompt
+
+        with patch(
+            "az_scout.plugins.get_plugin_system_prompt_addenda",
+            return_value=["Treat AV* SKU aliases as AVS requests."],
+        ):
+            prompt = _build_system_prompt(mode="discussion")
+
+        assert "Additional plugin guidance:" in prompt
+        assert "Treat AV* SKU aliases as AVS requests." in prompt
+
+    def test_plugin_mode_does_not_append_discussion_addenda(self):
+        from az_scout.services.ai_chat import _build_system_prompt
+
+        with (
+            patch(
+                "az_scout.plugins.get_plugin_chat_modes",
+                return_value={
+                    "custom-mode": ChatMode(
+                        id="custom-mode",
+                        label="Custom",
+                        system_prompt="Plugin mode prompt.",
+                        welcome_message="Hi",
+                    )
+                },
+            ),
+            patch(
+                "az_scout.plugins.get_plugin_system_prompt_addenda",
+                return_value=["Should not appear in custom mode."],
+            ),
+        ):
+            prompt = _build_system_prompt(mode="custom-mode")
+
+        assert "Plugin mode prompt." in prompt
+        assert "Should not appear in custom mode." not in prompt
 
 
 # ---------------------------------------------------------------------------

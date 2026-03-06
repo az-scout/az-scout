@@ -30,6 +30,7 @@ dependencies = [
     "click>=8.1",
     "mcp[cli]>=1.9",
     "httpx>=0.28",
+    "rich>=13.9",
 ]
 
 [project.urls]

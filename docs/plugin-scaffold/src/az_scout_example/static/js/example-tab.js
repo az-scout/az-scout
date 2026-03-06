@@ -95,36 +95,19 @@
             }
         }
 
-        // --- react to main-app changes --------------------------------------
-        // The main app fires "change" on tenant-select and sets region-select's
-        // value; we observe both with MutationObserver + change events.
-        if (tenantEl) {
-            tenantEl.addEventListener("change", () => {
-                updateBadges();
-                refreshSubscriptions();
-            });
+        // --- react to main-app context events -------------------------------
+        function onContextChanged() {
+            updateBadges();
+            refreshSubscriptions();
         }
-        // region-select is a hidden input whose value is set programmatically,
-        // so we poll / observe mutations on the value attribute.
-        let _lastRegion = regionEl?.value || "";
-        const regionObserver = new MutationObserver(() => {
-            if (regionEl.value !== _lastRegion) {
-                _lastRegion = regionEl.value;
-                updateBadges();
-                refreshSubscriptions();
-            }
+
+        document.addEventListener("azscout:tenant-changed", onContextChanged);
+        document.addEventListener("azscout:region-changed", onContextChanged);
+
+        // Optional extension point for plugin authors
+        document.addEventListener("azscout:subscriptions-loaded", () => {
+            // no-op by default
         });
-        if (regionEl) {
-            regionObserver.observe(regionEl, { attributes: true, attributeFilter: ["value"] });
-            // Also listen for a manual "change" event (some code paths fire it)
-            regionEl.addEventListener("change", () => {
-                if (regionEl.value !== _lastRegion) {
-                    _lastRegion = regionEl.value;
-                    updateBadges();
-                    refreshSubscriptions();
-                }
-            });
-        }
 
         // Enable button when a subscription is selected
         subSelect.addEventListener("change", () => {

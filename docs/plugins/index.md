@@ -24,18 +24,24 @@ The plugin manager UI shows all discovered plugins, both built-in and external. 
 ## Quick start
 
 ```bash
-# Copy the scaffold
-cp -r docs/plugin-scaffold az-scout-myplugin
-cd az-scout-myplugin
+# From any environment with az-scout installed
+az-scout create-plugin
 
-# Edit pyproject.toml (name, entry point)
-# Implement your plugin in src/az_scout_myplugin/__init__.py
+# Move into the generated plugin directory
+cd /path/to/generated/az-scout-myplugin
 
 # Install in dev mode alongside az-scout
 uv pip install -e .
 
 # Restart az-scout — your plugin is active
 az-scout
+```
+
+If you are developing from this repository without installing the package first,
+you can run:
+
+```bash
+python3 tools/plugin-scaffold/create_plugin.py
 ```
 
 ---
@@ -56,6 +62,7 @@ class MyPlugin:
     def get_static_dir(self) -> Path | None: ...
     def get_tabs(self) -> list[TabDefinition] | None: ...
     def get_chat_modes(self) -> list[ChatMode] | None: ...
+    def get_system_prompt_addendum(self) -> str | None: ...
 
 plugin = MyPlugin()  # module-level instance
 ```
@@ -73,6 +80,7 @@ All methods are optional — return `None` to skip a layer.
 | **UI tabs** | `get_tabs()` | `TabDefinition` list — rendered as Bootstrap tabs in the main UI |
 | **Static assets** | `get_static_dir()` | `Path` to a directory, served at `/plugins/{name}/static/` |
 | **Chat modes** | `get_chat_modes()` | `ChatMode` list — added to the chat panel mode toggle |
+| **Prompt addendum** | `get_system_prompt_addendum()` | Extra instructions appended to default `discussion` system prompt |
 
 ### TabDefinition
 
@@ -133,20 +141,33 @@ Plugin scripts run after `app.js` and can use these globals:
 
 ### Reacting to context changes
 
-```javascript
-// Listen for tenant changes
-document.getElementById("tenant-select")
-    .addEventListener("change", () => { /* reload plugin data */ });
+Preferred approach: subscribe to core context events emitted by `app.js`.
 
-// Region is a hidden input — observe with MutationObserver
-const regionEl = document.getElementById("region-select");
-let lastRegion = regionEl.value;
-new MutationObserver(() => {
-    if (regionEl.value !== lastRegion) {
-        lastRegion = regionEl.value;
-        // reload plugin data
-    }
-}).observe(regionEl, { attributes: true, attributeFilter: ["value"] });
+```javascript
+document.addEventListener("azscout:regions-loaded", (event) => {
+    const { regions, tenantId } = event.detail;
+    // regions global has been refreshed for this tenant
+});
+
+document.addEventListener("azscout:tenants-loaded", (event) => {
+    const { tenants, defaultTenantId, tenantId } = event.detail;
+    // tenant list was loaded/refreshed; tenantId is the current selected tenant
+});
+
+document.addEventListener("azscout:tenant-changed", (event) => {
+    const { tenantId } = event.detail;
+    // selected tenant changed; region/subscriptions reload will follow
+});
+
+document.addEventListener("azscout:subscriptions-loaded", (event) => {
+    const { subscriptions, tenantId } = event.detail;
+    // subscriptions global has been refreshed for this tenant
+});
+
+document.addEventListener("azscout:region-changed", (event) => {
+    const { region, tenantId } = event.detail;
+    // selected region changed
+});
 ```
 
 ### HTML fragments pattern
