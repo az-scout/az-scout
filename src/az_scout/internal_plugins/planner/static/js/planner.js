@@ -746,7 +746,7 @@ function renderZoneAvailability(profile, confidence) {
     const spotSignal = _components.find(b => b.name === "spot");
     const spotScore = spotSignal?.score100;
     const physicalZoneMap = getPlannerPhysicalZoneMap();
-    const spotZoneScores = (lastSpotScores?.scores || {})[_pricingModalSku] || {};
+    const spotZoneScores = lastSpotScores?.scores?.[_pricingModalSku] || {};
 
     function row(label, value) {
         return `<div class="vm-profile-row"><span class="vm-profile-label">${escapeHtml(label)}</span><span>${value}</span></div>`;
@@ -1185,7 +1185,7 @@ function renderSkuTable(skus) {
 
         // Spot Score
         if (showSpot) {
-            const spotZoneScores = (lastSpotScores?.scores || {})[sku.name] || {};
+            const spotZoneScores = lastSpotScores?.scores?.[sku.name] || {};
             const spotZones = Object.keys(spotZoneScores).sort();
             const hasSpotPrice = sku.pricing?.spot != null;
             if (spotZones.length > 0) {
@@ -1345,7 +1345,7 @@ function _parseNumericFilter(val) {
 /** Test a cell value against a parsed numeric filter. */
 function _matchNumericFilter(cellVal, filter) {
     const n = parseFloat(cellVal);
-    if (isNaN(n)) return false;
+    if (Number.isNaN(n)) return false;
     switch (filter.op) {
         case ">": return n > filter.val;
         case ">=": return n >= filter.val;
@@ -1376,7 +1376,7 @@ function _buildColumnFilters(tableEl, filterableCols, numericCols) {
             const input = document.createElement("input");
             input.type = "search";
             input.className = "datatable-column-filter";
-            const isNumeric = numericCols && numericCols.has(idx);
+            const isNumeric = numericCols?.has(idx);
             input.placeholder = isNumeric ? ">5, <32, 4-16\u2026" : "Filter\u2026";
             if (isNumeric) input.dataset.numeric = "1";
             input.dataset.col = idx;
@@ -1478,7 +1478,7 @@ function exportSkuCSV() {
         return [
             sku.name, sku.family || "", sku.capabilities.vCPUs || "", sku.capabilities.MemoryGB || "",
             quota.limit ?? "", quota.used ?? "", quota.remaining ?? "",
-            Object.entries((lastSpotScores?.scores || {})[sku.name] || {}).sort(([a], [b]) => a.localeCompare(b)).map(([z, s]) => `Z${z}:${s}`).join(" ") || "",
+            Object.entries(lastSpotScores?.scores?.[sku.name] || {}).sort(([a], [b]) => a.localeCompare(b)).map(([z, s]) => `Z${z}:${s}`).join(" ") || "",
             sku.confidence?.score ?? "", sku.confidence?.label || "",
             ...(hasPricing ? [sku.pricing?.paygo ?? "", sku.pricing?.spot ?? ""] : []),
             ...zoneCols

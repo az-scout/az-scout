@@ -112,7 +112,7 @@ async function apiFetch(url) {
     const resp = await fetch(url);
     if (!resp.ok) {
         const body = await resp.json().catch(() => ({}));
-        throw new Error(body.error || `HTTP ${resp.status}`);
+        throw new Error(body.error || body.detail || `HTTP ${resp.status}`);
     }
     return resp.json();
 }
@@ -125,7 +125,7 @@ async function apiPost(url, body) {
     });
     if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));
-        throw new Error(data.error || `HTTP ${resp.status}`);
+        throw new Error(data.error || data.detail || `HTTP ${resp.status}`);
     }
     return resp.json();
 }

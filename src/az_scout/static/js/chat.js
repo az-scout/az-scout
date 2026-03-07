@@ -493,7 +493,7 @@ function _navigateChatHistory(direction, e) {
     input.setSelectionRange(input.value.length, input.value.length);
 }
 
-function _appendToolStatus(msgDiv, toolName, status, argsJson) {
+function _appendToolStatus(msgDiv, toolName, _status, argsJson) {
     let toolsDiv = msgDiv.querySelector(".chat-tool-calls");
     if (!toolsDiv) {
         toolsDiv = document.createElement("div");
@@ -745,7 +745,7 @@ function _containsOnlyChoiceChips(content) {
 
 function _renderMarkdownTables(html) {
     const lines = html.split("\n");
-    let result = [];
+    const result = [];
     let inTable = false;
     let tableRows = [];
 

@@ -33,7 +33,7 @@
 // ---------------------------------------------------------------------------
 // Topology tab state
 // ---------------------------------------------------------------------------
-let topoSelectedSubs = new Set();           // selected subscription IDs for topology
+const topoSelectedSubs = new Set();           // selected subscription IDs for topology
 let lastMappingData = null;                 // cached /api/mappings result
 
 // ---------------------------------------------------------------------------

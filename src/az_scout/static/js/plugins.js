@@ -1,8 +1,8 @@
 /* Plugin Manager offcanvas logic */
 /* global apiFetch, apiPost, bootstrap */
 
-(function () {
-    "use strict";
+(() => {
+
 
     const container = document.getElementById("plugin-manager-body");
     if (!container) return;
@@ -241,7 +241,7 @@
 
     // ---- Validate ----
 
-    window.pmValidate = async function () {
+    window.pmValidate = async () => {
         const repoUrl = (document.getElementById("pm-repo-url").value || "").trim();
         const ref = (document.getElementById("pm-ref").value || "").trim();
         if (!repoUrl) return;
@@ -265,7 +265,7 @@
 
     // ---- Install ----
 
-    window.pmInstall = async function () {
+    window.pmInstall = async () => {
         const repoUrl = (document.getElementById("pm-repo-url").value || "").trim();
         const ref = (document.getElementById("pm-ref").value || "").trim();
         if (!repoUrl) return;
@@ -290,7 +290,7 @@
 
     // ---- Uninstall ----
 
-    window.pmUninstall = async function (distName) {
+    window.pmUninstall = async (distName) => {
         if (!confirm("Uninstall plugin \"" + distName + "\"?")) return;
 
         try {
@@ -308,7 +308,7 @@
 
     // ---- Check updates ----
 
-    window.pmCheckUpdates = async function () {
+    window.pmCheckUpdates = async () => {
         showSpinner("Checking for updates…");
         try {
             const data = await apiFetch("/api/plugins/updates");
@@ -326,7 +326,7 @@
 
     // ---- Update single ----
 
-    window.pmUpdate = async function (distName) {
+    window.pmUpdate = async (distName) => {
         showSpinner("Updating " + distName + "…");
         try {
             const data = await apiPost("/api/plugins/update", { distribution_name: distName });
@@ -345,7 +345,7 @@
 
     // ---- Update all ----
 
-    window.pmUpdateAll = async function () {
+    window.pmUpdateAll = async () => {
         if (!confirm("Update all plugins with available updates?")) return;
 
         showSpinner("Updating all plugins…");
@@ -425,7 +425,7 @@
         }
     }
 
-    window.pmQuickInstall = async function (source, version) {
+    window.pmQuickInstall = async (source, version) => {
         showSpinner("Installing…");
         try {
             const data = await apiPost("/api/plugins/install", { repo_url: source, ref: version });
