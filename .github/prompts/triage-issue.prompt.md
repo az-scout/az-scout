@@ -1,10 +1,5 @@
 ---
 description: Triage a GitHub issue — investigate the codebase, assess impact, propose a plan, and post findings as a comment on the issue.
-
-tools:
-  - run_in_terminal
-  - mcp_github_issue_read
-  - mcp_github_add_issue_comment
 ---
 
 Triage a GitHub issue by executing each step below.

@@ -1,9 +1,5 @@
 ---
 description: Add a new plugin to the known-plugins list and recommended catalog.
-
-tools:
-  - run_in_terminal
-  - mcp_github_get_file_contents
 ---
 
 Add a new external plugin to the az-scout plugin catalog.

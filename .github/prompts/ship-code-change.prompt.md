@@ -1,14 +1,5 @@
 ---
 description: Prepare a code change for shipping — run quality checks, update changelog and docs, commit, and open a PR.
-
-tools:
-  - run_in_terminal
-  - get_changed_files
-  - get_errors
-  - create_and_run_task
-  - mcp_github_create_branch
-  - mcp_github_push_files
-  - mcp_github_create_pull_request
 ---
 
 Prepare the current working-tree changes for shipping by executing each step below.

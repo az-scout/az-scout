@@ -7,6 +7,8 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
 ## Unreleased
 
+## [2026.3.4] - 2026-03-08
+
 ### Added
 
 - **Public ARM helpers** – new `arm_get()`, `arm_post()`, and `arm_paginate()` functions in `azure_api` provide authenticated ARM calls with built-in 429/5xx retry, exponential backoff, `Retry-After` header support, and structured error handling (`ArmAuthorizationError`, `ArmNotFoundError`, `ArmRequestError`). These are the recommended way for plugins and core modules to interact with Azure Resource Manager (#97).

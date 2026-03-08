@@ -1,9 +1,5 @@
 ---
 description: Review an external az-scout plugin for convention compliance, correctness, and best practices.
-
-tools:
-  - un_in_termina
-  - mcp_github_get_file_contents
 ---
 
 Review an external az-scout plugin for compliance with project conventions.

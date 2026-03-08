@@ -1,9 +1,5 @@
 ---
 description: Tag a new CalVer release on the main branch — finalize changelog, commit, tag, push, and verify.
-
-tools:
-  - run_in_terminal
-  - get_changed_files
 ---
 
 Tag a new release by executing each step below **on the `main` branch**.
