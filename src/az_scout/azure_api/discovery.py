@@ -78,8 +78,21 @@ def list_regions(
 ) -> list[dict[str, Any]]:
     """Return AZ-enabled regions as ``[{"name": ..., "displayName": ...}, ...]``.
 
+    Only returns regions that have **Availability Zone mappings** and are
+    physical (not logical/staging).  This is the primary function used by
+    the core app for zone topology and deployment planning.
+
+    For a broader list that includes regions without AZ support (e.g. for
+    pricing comparison or latency analysis), use :func:`list_locations`.
+
     When *subscription_id* is ``None`` the first enabled subscription is used.
+    Results are cached for 60 minutes (regions rarely change).
     """
+    cache_key = f"regions:{tenant_id or ''}:{subscription_id or ''}"
+    cached = _cached(cache_key, ttl=3600)
+    if cached is not None:
+        return cached  # type: ignore[return-value]
+
     sub_id = subscription_id
     if not sub_id:
         subs_url = f"{AZURE_MGMT_URL}/subscriptions?api-version={AZURE_API_VERSION}"
@@ -108,6 +121,7 @@ def list_regions(
         len(locations),
         sub_id[:8] + "…" if sub_id else "auto",
     )
+    _cache_set(cache_key, result)
     return result
 
 
@@ -115,12 +129,22 @@ def list_locations(
     subscription_id: str | None = None,
     tenant_id: str | None = None,
 ) -> list[dict[str, str]]:
-    """Return all ARM locations as ``[{"name": ..., "displayName": ...}, ...]``.
+    """Return all physical ARM locations as ``[{"name": ..., "displayName": ...}, ...]``.
 
-    Unlike :func:`list_regions` this includes regions **without** Availability
-    Zones.  When *subscription_id* is ``None`` the first enabled subscription
+    Unlike :func:`list_regions`, this includes regions **without** Availability
+    Zone support.  Use this when you need a complete list of Azure regions
+    regardless of AZ capability — for example, pricing comparison, latency
+    analysis, or plugin features that operate on any region.
+
+    When *subscription_id* is ``None`` the first enabled subscription
     (sorted by ID) is used.
+    Results are cached for 60 minutes (locations rarely change).
     """
+    cache_key = f"locations:{tenant_id or ''}:{subscription_id or ''}"
+    cached = _cached(cache_key, ttl=3600)
+    if cached is not None:
+        return cached  # type: ignore[return-value]
+
     sub_id = subscription_id
     if not sub_id:
         subs_url = f"{AZURE_MGMT_URL}/subscriptions?api-version={AZURE_API_VERSION}"
@@ -150,6 +174,7 @@ def list_locations(
         len(locations),
         sub_id[:8] + "…" if sub_id else "auto",
     )
+    _cache_set(cache_key, result)
     return result
 
 

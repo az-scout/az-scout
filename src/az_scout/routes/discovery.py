@@ -51,6 +51,12 @@ async def list_subscriptions(
 @router.get(
     "/regions",
     summary="List AZ-enabled regions",
+    description=(
+        "Return regions that support Availability Zones. "
+        "Use this for zone topology and deployment planning. "
+        "For all physical regions (including those without AZ support), "
+        "use ``/api/locations`` instead."
+    ),
     response_model=list[RegionInfo],
     responses={404: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
 )
@@ -80,7 +86,13 @@ async def list_regions(
 
 @router.get(
     "/locations",
-    summary="List all ARM locations",
+    summary="List all physical Azure regions",
+    description=(
+        "Return all physical Azure regions, including those without "
+        "Availability Zone support. Use this for pricing comparison, "
+        "latency analysis, or plugin features that operate on any region. "
+        "For AZ-enabled regions only, use ``/api/regions`` instead."
+    ),
     response_model=list[RegionInfo],
     responses={400: {"model": ErrorResponse}, 502: {"model": ErrorResponse}},
 )
