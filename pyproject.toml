@@ -31,10 +31,11 @@ dependencies = [
     "mcp[cli]>=1.9",
     "httpx>=0.28",
     "rich>=13.9",
+    "prompt-toolkit>=3.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/az-scout/az-scout"
+Homepage = "https://az-scout.com"
 Repository = "https://github.com/az-scout/az-scout"
 Issues = "https://github.com/az-scout/az-scout/issues"
 

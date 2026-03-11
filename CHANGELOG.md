@@ -7,6 +7,16 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
 ## Unreleased
 
+### Added
+
+- **Interactive CLI chat** (`az-scout chat`) – terminal-based AI chat with Rich-rendered markdown responses, tool call panels with spinners, `[[choice]]` patterns as numbered options, and conversation history with Up/Down navigation. Supports one-shot queries (`az-scout chat "question"`) and interactive sessions (#103).
+- **Slash commands** – `/help`, `/context`, `/tenant`, `/subscription`, `/region`, `/mode`, `/tenants`, `/subscriptions`, `/regions`, `/clear`, `/new`, `/exit` with Tab auto-completion for commands and arguments (mode names, region names, tenant/subscription names).
+- **New dependency** – `prompt-toolkit>=3.0` for interactive terminal input with completion and history.
+
+### Changed
+
+- **Domain migration** – updated documentation site URL from `azscout.vupti.me` to `az-scout.com`.
+
 ## [2026.3.5] - 2026-03-10
 
 ### Changed

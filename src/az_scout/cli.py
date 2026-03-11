@@ -155,6 +155,40 @@ def mcp(http: bool, port: int, verbose: bool) -> None:
         mcp_server.run(transport="stdio")
 
 
+@cli.command()
+@click.argument("prompt", nargs=-1, required=False)
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    default=False,
+    help="Enable verbose logging.",
+)
+def chat(prompt: tuple[str, ...], verbose: bool) -> None:
+    """Interactive AI chat in the terminal.
+
+    Optionally pass a prompt as arguments:
+
+        az-scout chat "What SKUs are available in francecentral?"
+
+    Without a prompt, starts an interactive session.
+    """
+    import asyncio
+    import logging
+    import os
+
+    from az_scout.logging_config import _setup_logging
+
+    env_level = "DEBUG" if verbose else "WARNING"
+    os.environ["AZ_SCOUT_LOG_LEVEL"] = env_level
+    _setup_logging(level=logging.DEBUG if verbose else logging.WARNING)
+
+    from az_scout.services.cli_chat import run_cli_chat
+
+    initial_prompt = " ".join(prompt) if prompt else None
+    asyncio.run(run_cli_chat(initial_prompt=initial_prompt))
+
+
 @cli.command("create-plugin")
 @click.option("--name", "display_name", help="Plugin display name.")
 @click.option(

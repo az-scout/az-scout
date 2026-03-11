@@ -9,7 +9,7 @@
 
 Scout Azure regions for VM availability, zone mappings, pricing, spot scores, and quota — then plan deployments with confidence.
 
-📖 **Full documentation:** [azscout.vupti.me](https://azscout.vupti.me)
+📖 **Full documentation:** [az-scout.com](https://az-scout.com)
 
 **az-scout** helps Azure operators and architects answer the questions that matter when planning resilient, cost-efficient VM deployments:
 
@@ -121,6 +121,7 @@ az-scout [COMMAND] [OPTIONS]
 az-scout --help.     # show global help
 az-scout web --help  # show web subcommand help
 az-scout mcp --help  # show mcp subcommand help
+az-scout chat --help # show chat subcommand help
 az-scout --version   # show version
 ```
 
@@ -147,6 +148,40 @@ Run the MCP server.
   -v, --verbose   Enable verbose logging.
   --help          Show this message and exit.
 ```
+
+#### `az-scout chat`
+
+Interactive AI chat in the terminal. Requires Azure OpenAI credentials.
+
+```bash
+# Start an interactive session
+az-scout chat
+
+# One-shot query
+az-scout chat "What SKUs are available in francecentral?"
+```
+
+```
+  -v, --verbose   Enable verbose logging.
+  --help          Show this message and exit.
+```
+
+Slash commands are available during the chat session:
+
+| Command | Description |
+|---|---|
+| `/help` | Show available commands |
+| `/context` | Show current tenant, subscription, region, and mode |
+| `/tenant [id]` | Switch tenant (interactive picker or direct) |
+| `/subscription [id]` | Switch subscription (interactive picker or direct) |
+| `/region [name]` | Switch region (interactive picker or direct) |
+| `/mode [name]` | Switch chat mode (discussion, planner, …) |
+| `/tenants` | List accessible tenants |
+| `/subscriptions` | List enabled subscriptions |
+| `/regions` | List AZ-enabled regions |
+| `/clear` | Clear conversation history |
+| `/new` | Start a new session (re-select tenant, clear history) |
+| `/exit` | Exit (or press Ctrl+D) |
 
 ### MCP server
 
