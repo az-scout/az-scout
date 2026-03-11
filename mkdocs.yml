@@ -84,6 +84,7 @@ nav:
   - Features: features.md
   - AI Integration:
     - MCP server: ai/mcp.md
+    - Terminal Chat: ai/cli-chat.md
     - Prompt Examples: ai/prompts.md
   - Scoring: scoring.md
   - API Reference: api.md

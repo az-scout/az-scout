@@ -107,10 +107,12 @@ az-scout [COMMAND] [OPTIONS]
 Commands:
   web   Run the web UI (default)
   mcp   Run the MCP server
+  chat  Interactive AI chat in the terminal
 
 az-scout --help      # global help
 az-scout web --help  # web subcommand help
 az-scout mcp --help  # mcp subcommand help
+az-scout chat --help # chat subcommand help
 az-scout --version   # print version
 ```
 
@@ -135,6 +137,17 @@ Runs the MCP server in standalone mode.
 | `--http` | — | Use Streamable HTTP transport instead of stdio |
 | `--port INTEGER` | `8080` | Port for Streamable HTTP transport |
 | `-v, --verbose` | — | Enable verbose logging |
+
+### `az-scout chat`
+
+Interactive AI chat in the terminal. Requires Azure OpenAI credentials.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `PROMPT` | — | Optional initial question (e.g. `az-scout chat "list regions"`) |
+| `-v, --verbose` | — | Enable verbose logging |
+
+See [Terminal Chat](ai/cli-chat.md) for full documentation.
 
 ---
 

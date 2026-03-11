@@ -104,6 +104,8 @@ An optional chat panel powered by **Azure OpenAI** with streaming responses, too
 The assistant has access to all az-scout MCP tools and can answer questions like:
 *"Which VM SKU gives me the best confidence score in West Europe with 4 vCPUs?"*
 
+The same chat is also available directly in the terminal via `az-scout chat` — see [Terminal Chat](ai/cli-chat.md).
+
 <!-- Screenshot -->
 ![AI Chat Assistant](assets/screenshots/ai-chat.png){ .screenshot }
 
