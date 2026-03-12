@@ -12,6 +12,7 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 - **Interactive CLI chat** (`az-scout chat`) – terminal-based AI chat with Rich-rendered markdown responses, tool call panels with spinners, `[[choice]]` patterns as numbered options, and conversation history with Up/Down navigation. Supports one-shot queries (`az-scout chat "question"`) and interactive sessions (#103).
 - **Slash commands** – `/help`, `/context`, `/tenant`, `/subscription`, `/region`, `/mode`, `/tenants`, `/subscriptions`, `/regions`, `/clear`, `/new`, `/exit` with Tab auto-completion for commands and arguments (mode names, region names, tenant/subscription names).
 - **New dependency** – `prompt-toolkit>=3.0` for interactive terminal input with completion and history.
+- **ODCR Coverage plugin** – added `az-scout-plugin-odcr-coverage` to the plugin catalog and recommended plugins.
 
 ### Changed
 
