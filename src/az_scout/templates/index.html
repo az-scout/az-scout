@@ -30,6 +30,8 @@
             <span>Azure Scout</span>
         </a>
         <div class="d-flex align-items-center gap-2">
+            <!-- OBO Auth (shown when configured) -->
+            <span id="auth-container" style="display:none" class="d-flex align-items-center gap-2"></span>
             {% if auth_user %}
             <span class="text-body-secondary small d-flex align-items-center gap-1" title="Signed in as {{ auth_user }}">
                 <i class="bi bi-person-circle"></i> {{ auth_user }}
@@ -55,6 +57,7 @@
 
 <!-- ===== Main content ===== -->
 <div class="container-fluid mt-3 flex-grow-1 overflow-auto pb-4">
+<div id="main-content">
 
     <!-- Shared selectors: Tenant + Region -->
     <div class="row mb-2 g-2 align-items-center" id="selector-bar">
@@ -221,6 +224,8 @@
     </div>
 </div>
 
+</div><!-- /main-content -->
+
 {% if chat_enabled %}
 <!-- ===== AI Chat Panel ===== -->
 <button type="button" class="chat-fab" id="chat-fab" onclick="toggleChatPanel()" title="AI Chat Assistant">
@@ -276,6 +281,7 @@
 <script src="https://cdn.jsdelivr.net/npm/simple-datatables@9/dist/umd/simple-datatables.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/languages/json.min.js"></script>
+<script src="{{ url_for('static', path='js/auth.js') }}"></script>
 <script src="{{ url_for('static', path='js/app.js') }}"></script>
 <script src="{{ url_for('static', path='js/chat.js') }}"></script>
 <script src="{{ url_for('static', path='js/plugins.js') }}"></script>

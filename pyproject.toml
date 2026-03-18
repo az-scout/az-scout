@@ -26,6 +26,7 @@ dependencies = [
     "uvicorn[standard]>=0.34",
     "jinja2>=3.1",
     "azure-identity>=1.15",
+    "msal>=1.28",
     "requests>=2.31",
     "click>=8.1",
     "mcp[cli]>=1.9",

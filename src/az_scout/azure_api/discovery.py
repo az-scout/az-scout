@@ -19,27 +19,46 @@ from az_scout.azure_api._cache import _cache_set, _cached
 logger = logging.getLogger(__name__)
 
 
-def list_tenants(tenant_id: str | None = None) -> dict[str, Any]:
+def list_tenants(
+    tenant_id: str | None = None,
+    *,
+    user_token: str | None = None,
+    direct_arm: bool = False,
+) -> dict[str, Any]:
     """Return tenants with auth status and the default tenant ID.
 
     Returns ``{"tenants": [...], "defaultTenantId": ...}``.
     Results are cached for ``_DISCOVERY_CACHE_TTL`` seconds.
     """
-    cache_key = f"tenants:{tenant_id or ''}"
-    cached = _cached(
-        cache_key, ttl=3600
-    )  # Tenants don't change often, so a long TTL is reasonable.
-    if cached is not None:
-        return cached  # type: ignore[return-value]
+    # Skip cache when using OBO (each user sees different tenants)
+    if not user_token:
+        cache_key = f"tenants:{tenant_id or ''}"
+        cached = _cached(
+            cache_key, ttl=3600
+        )  # Tenants don't change often, so a long TTL is reasonable.
+        if cached is not None:
+            return cached  # type: ignore[return-value]
 
     url = f"{AZURE_MGMT_URL}/tenants?api-version={AZURE_API_VERSION}"
-    all_tenants = arm_paginate(url, tenant_id=tenant_id)
+    all_tenants = arm_paginate(
+        url,
+        tenant_id=tenant_id,
+        user_token=user_token,
+        direct_arm=direct_arm,
+    )
 
     tenant_ids = [t["tenantId"] for t in all_tenants]
 
-    # Suppress AzureCliCredential subprocess stderr noise across all threads.
-    with _suppress_stderr(), ThreadPoolExecutor(max_workers=min(len(tenant_ids), 8)) as pool:
-        auth_results = dict(zip(tenant_ids, pool.map(_check_tenant_auth, tenant_ids), strict=True))
+    if user_token:
+        # In OBO mode, we can't check auth per-tenant with the app credential.
+        # All returned tenants are accessible by the user.
+        auth_results = {tid: True for tid in tenant_ids}
+    else:
+        # Suppress AzureCliCredential subprocess stderr noise across all threads.
+        with _suppress_stderr(), ThreadPoolExecutor(max_workers=min(len(tenant_ids), 8)) as pool:
+            auth_results = dict(
+                zip(tenant_ids, pool.map(_check_tenant_auth, tenant_ids), strict=True)
+            )
 
     tenants = [
         {
@@ -49,18 +68,25 @@ def list_tenants(tenant_id: str | None = None) -> dict[str, Any]:
         }
         for t in all_tenants
     ]
+    default_tid = tenant_ids[0] if (user_token and tenant_ids) else _get_default_tenant_id()
     result = {
         "tenants": sorted(tenants, key=lambda x: x["name"].lower()),
-        "defaultTenantId": _get_default_tenant_id(),
+        "defaultTenantId": default_tid,
     }
-    _cache_set(cache_key, result)
+    if not user_token:
+        _cache_set(cache_key, result)
     return result
 
 
-def list_subscriptions(tenant_id: str | None = None) -> list[dict[str, Any]]:
+def list_subscriptions(
+    tenant_id: str | None = None,
+    *,
+    user_token: str | None = None,
+    direct_arm: bool = False,
+) -> list[dict[str, Any]]:
     """Return enabled subscriptions as ``[{"id": ..., "name": ...}, ...]``."""
     url = f"{AZURE_MGMT_URL}/subscriptions?api-version={AZURE_API_VERSION}"
-    all_subs = arm_paginate(url, tenant_id=tenant_id)
+    all_subs = arm_paginate(url, tenant_id=tenant_id, user_token=user_token, direct_arm=direct_arm)
     logger.debug("list_subscriptions: %d total, tenant=%s", len(all_subs), tenant_id or "default")
 
     subs = [
@@ -75,6 +101,9 @@ def list_subscriptions(tenant_id: str | None = None) -> list[dict[str, Any]]:
 def list_regions(
     subscription_id: str | None = None,
     tenant_id: str | None = None,
+    *,
+    user_token: str | None = None,
+    direct_arm: bool = False,
 ) -> list[dict[str, Any]]:
     """Return AZ-enabled regions as ``[{"name": ..., "displayName": ...}, ...]``.
 
@@ -89,14 +118,20 @@ def list_regions(
     Results are cached for 60 minutes (regions rarely change).
     """
     cache_key = f"regions:{tenant_id or ''}:{subscription_id or ''}"
-    cached = _cached(cache_key, ttl=3600)
-    if cached is not None:
-        return cached  # type: ignore[return-value]
+    if not user_token:
+        cached = _cached(cache_key, ttl=3600)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
 
     sub_id = subscription_id
     if not sub_id:
         subs_url = f"{AZURE_MGMT_URL}/subscriptions?api-version={AZURE_API_VERSION}"
-        subs_data = arm_get(subs_url, tenant_id=tenant_id)
+        subs_data = arm_get(
+            subs_url,
+            tenant_id=tenant_id,
+            user_token=user_token,
+            direct_arm=direct_arm,
+        )
         enabled = [
             s["subscriptionId"] for s in subs_data.get("value", []) if s.get("state") == "Enabled"
         ]
@@ -105,7 +140,7 @@ def list_regions(
         sub_id = enabled[0]
 
     url = f"{AZURE_MGMT_URL}/subscriptions/{sub_id}/locations?api-version={AZURE_API_VERSION}"
-    loc_data = arm_get(url, tenant_id=tenant_id)
+    loc_data = arm_get(url, tenant_id=tenant_id, user_token=user_token, direct_arm=direct_arm)
 
     locations = loc_data.get("value", [])
     regions = [
@@ -121,13 +156,16 @@ def list_regions(
         len(locations),
         sub_id[:8] + "…" if sub_id else "auto",
     )
-    _cache_set(cache_key, result)
+    _cache_set(cache_key, result) if not user_token else None
     return result
 
 
 def list_locations(
     subscription_id: str | None = None,
     tenant_id: str | None = None,
+    *,
+    user_token: str | None = None,
+    direct_arm: bool = False,
 ) -> list[dict[str, str]]:
     """Return all physical ARM locations as ``[{"name": ..., "displayName": ...}, ...]``.
 
@@ -141,14 +179,20 @@ def list_locations(
     Results are cached for 60 minutes (locations rarely change).
     """
     cache_key = f"locations:{tenant_id or ''}:{subscription_id or ''}"
-    cached = _cached(cache_key, ttl=3600)
-    if cached is not None:
-        return cached  # type: ignore[return-value]
+    if not user_token:
+        cached = _cached(cache_key, ttl=3600)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
 
     sub_id = subscription_id
     if not sub_id:
         subs_url = f"{AZURE_MGMT_URL}/subscriptions?api-version={AZURE_API_VERSION}"
-        subs_data = arm_get(subs_url, tenant_id=tenant_id)
+        subs_data = arm_get(
+            subs_url,
+            tenant_id=tenant_id,
+            user_token=user_token,
+            direct_arm=direct_arm,
+        )
         enabled = sorted(
             s["subscriptionId"] for s in subs_data.get("value", []) if s.get("state") == "Enabled"
         )
@@ -157,7 +201,7 @@ def list_locations(
         sub_id = enabled[0]
 
     url = f"{AZURE_MGMT_URL}/subscriptions/{sub_id}/locations?api-version={AZURE_API_VERSION}"
-    loc_data = arm_get(url, tenant_id=tenant_id)
+    loc_data = arm_get(url, tenant_id=tenant_id, user_token=user_token, direct_arm=direct_arm)
 
     locations = loc_data.get("value", [])
     result = sorted(
@@ -174,7 +218,7 @@ def list_locations(
         len(locations),
         sub_id[:8] + "…" if sub_id else "auto",
     )
-    _cache_set(cache_key, result)
+    _cache_set(cache_key, result) if not user_token else None
     return result
 
 

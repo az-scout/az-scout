@@ -55,6 +55,13 @@ from az_scout.azure_api._cache import (  # noqa: F401
     _discovery_cache,
 )
 
+# -- OBO (On-Behalf-Of) ----------------------------------------------------
+from az_scout.azure_api._obo import (  # noqa: F401
+    OboTokenError,
+    is_obo_enabled,
+    obo_exchange,
+)
+
 # -- Pagination --------------------------------------------------------------
 from az_scout.azure_api._pagination import _paginate  # noqa: F401
 
