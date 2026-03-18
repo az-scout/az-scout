@@ -244,6 +244,67 @@
               "regex": "^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$",
               "validationMessage": "Must be a valid GUID or empty."
             }
+          },
+          {
+            "name": "oboSeparator",
+            "type": "Microsoft.Common.Section",
+            "label": "On-Behalf-Of (OBO) Authentication",
+            "elements": [
+              {
+                "name": "oboInfo",
+                "type": "Microsoft.Common.InfoBox",
+                "options": {
+                  "text": "OBO lets each user sign in with their own Microsoft account. ARM calls use their RBAC permissions instead of the managed identity. Requires a pre-created multi-tenant App Registration.",
+                  "style": "Info"
+                }
+              }
+            ]
+          },
+          {
+            "name": "enableObo",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Enable OBO authentication (multi-user)"
+          },
+          {
+            "name": "oboClientId",
+            "type": "Microsoft.Common.TextBox",
+            "label": "OBO App Registration Client ID",
+            "defaultValue": "",
+            "toolTip": "Client ID from the multi-tenant App Registration created for OBO.",
+            "visible": "[steps('authentication').enableObo]",
+            "constraints": {
+              "required": "[steps('authentication').enableObo]",
+              "regex": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "validationMessage": "Must be a valid GUID."
+            }
+          },
+          {
+            "name": "oboClientSecret",
+            "type": "Microsoft.Common.PasswordBox",
+            "label": {
+              "password": "OBO App Registration Client Secret"
+            },
+            "toolTip": "Client secret from the OBO App Registration.",
+            "visible": "[steps('authentication').enableObo]",
+            "constraints": {
+              "required": "[steps('authentication').enableObo]"
+            },
+            "options": {
+              "hideConfirmation": true
+            }
+          },
+          {
+            "name": "oboTenantId",
+            "type": "Microsoft.Common.TextBox",
+            "label": "OBO Tenant ID (optional)",
+            "defaultValue": "",
+            "toolTip": "Home tenant ID of the OBO App Registration. Leave empty to use the deployment tenant.",
+            "visible": "[steps('authentication').enableObo]",
+            "constraints": {
+              "required": false,
+              "regex": "^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$",
+              "validationMessage": "Must be a valid GUID or empty."
+            }
           }
         ]
       }
@@ -266,7 +327,11 @@
       "enableAuth": "[steps('authentication').enableAuth]",
       "authClientId": "[if(steps('authentication').enableAuth, steps('authentication').authClientId, '')]",
       "authClientSecret": "[if(steps('authentication').enableAuth, steps('authentication').authClientSecret, '')]",
-      "authTenantId": "[if(and(steps('authentication').enableAuth, not(empty(steps('authentication').authTenantId))), steps('authentication').authTenantId, '')]"
+      "authTenantId": "[if(and(steps('authentication').enableAuth, not(empty(steps('authentication').authTenantId))), steps('authentication').authTenantId, '')]",
+      "enableObo": "[steps('authentication').enableObo]",
+      "oboClientId": "[if(steps('authentication').enableObo, steps('authentication').oboClientId, '')]",
+      "oboClientSecret": "[if(steps('authentication').enableObo, steps('authentication').oboClientSecret, '')]",
+      "oboTenantId": "[if(and(steps('authentication').enableObo, not(empty(steps('authentication').oboTenantId))), steps('authentication').oboTenantId, '')]"
     }
   }
 }
