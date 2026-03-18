@@ -115,15 +115,24 @@
             }
           },
           {
+            "name": "oboPermissionsInfo",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": "[steps('authentication').enableObo]",
+            "options": {
+              "text": "With OBO enabled, each user authenticates with their own RBAC permissions. Target subscription selection below is optional — only needed if you also want the managed identity to have Reader access (e.g. for CLI mode fallback).",
+              "style": "Info"
+            }
+          },
+          {
             "name": "readerSubscriptionIds",
             "type": "Microsoft.Common.DropDown",
             "label": "Target subscriptions",
             "multiselect": true,
             "selectAll": true,
-            "toolTip": "Select the subscriptions to grant Reader access to the managed identity.",
+            "toolTip": "Select the subscriptions to grant Reader access to the managed identity. Optional when OBO is enabled.",
             "constraints": {
               "allowedValues": "[map(filter(steps('permissions').subscriptionsApi.value, (sub) => equals(sub.state, 'Enabled')), (sub) => parse(concat('{\"label\":\"', sub.displayName, ' (', sub.subscriptionId, ')\",\"value\":\"', sub.subscriptionId, '\"}')))]",
-              "required": true
+              "required": "[not(steps('authentication').enableObo)]"
             }
           },
           {

@@ -60,7 +60,7 @@ param minReplicas int = 1
 @maxValue(10)
 param maxReplicas int = 2
 
-@description('Subscription IDs to grant Reader access to the managed identity. Pass as a JSON array.')
+@description('Subscription IDs to grant Reader access to the managed identity. Optional when OBO is enabled (each user authenticates with their own RBAC).')
 param readerSubscriptionIds array = []
 
 @description('Assign Virtual Machine Contributor role for Spot Placement Scores. Set to false if you don\'t need spot scores.')

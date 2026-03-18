@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "14176777882774767154"
+      "templateHash": "13139490619029811158"
     }
   },
   "parameters": {
@@ -66,7 +66,7 @@
       "type": "array",
       "defaultValue": [],
       "metadata": {
-        "description": "Subscription IDs to grant Reader access to the managed identity. Pass as a JSON array."
+        "description": "Subscription IDs to grant Reader access to the managed identity. Optional when OBO is enabled (each user authenticates with their own RBAC)."
       }
     },
     "enableSpotScoreRole": {
