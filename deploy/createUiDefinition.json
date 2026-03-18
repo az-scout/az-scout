@@ -109,13 +109,13 @@
           {
             "name": "easyAuthSection",
             "type": "Microsoft.Common.Section",
-            "label": "EasyAuth (gateway-level authentication)",
+            "label": "Gateway Authentication (EasyAuth)",
             "elements": [
               {
                 "name": "easyAuthInfo",
                 "type": "Microsoft.Common.InfoBox",
                 "options": {
-                  "text": "EasyAuth adds Entra ID login at the gateway level. All users share the app's managed identity for ARM access.",
+                  "text": "EasyAuth is an Azure Container Apps built-in feature that requires users to sign in with Entra ID before reaching the app. All users share the app's managed identity for ARM access. This is a simple way to restrict access without per-user permissions.",
                   "style": "Info"
                 }
               }
@@ -124,7 +124,7 @@
           {
             "name": "enableAuth",
             "type": "Microsoft.Common.CheckBox",
-            "label": "Enable Entra ID authentication (EasyAuth)"
+            "label": "Enable EasyAuth (gateway-level Entra ID login)"
           },
           {
             "name": "authClientId",
@@ -176,7 +176,7 @@
                 "name": "oboInfo",
                 "type": "Microsoft.Common.InfoBox",
                 "options": {
-                  "text": "OBO lets each user sign in with their own Microsoft account. ARM calls use their RBAC permissions instead of the managed identity. Requires a pre-created multi-tenant App Registration. When enabled, the Permissions step becomes optional.",
+                  "text": "Unlike EasyAuth, OBO lets each user sign in with their own Microsoft account and ARM calls use their individual RBAC permissions. Requires a pre-created multi-tenant App Registration (see documentation). When enabled, the Permissions step becomes optional.",
                   "style": "Info"
                 }
               }
