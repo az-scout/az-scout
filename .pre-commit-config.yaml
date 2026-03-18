@@ -27,6 +27,15 @@ repos:
         files: ^deploy/main\.bicep$
         pass_filenames: false
 
+  - repo: local
+    hooks:
+      - id: biome-lint
+        name: Lint JavaScript (Biome)
+        language: system
+        entry: npx -y @biomejs/biome@2.4.6 lint
+        types: [javascript]
+        files: ^src/az_scout/.*\\.js$
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
