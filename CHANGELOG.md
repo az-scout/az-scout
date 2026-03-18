@@ -7,6 +7,15 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
 ## Unreleased
 
+### Added
+
+- **On-Behalf-Of (OBO) authentication** – Multi-user mode where each user signs in with their Microsoft account and az-scout accesses Azure ARM APIs with their RBAC permissions instead of the app's managed identity. Enabled via `AZ_SCOUT_CLIENT_ID`, `AZ_SCOUT_CLIENT_SECRET`, and `AZ_SCOUT_TENANT_ID` environment variables.
+- **MSAL.js frontend auth** – Sign-in screen, per-tenant token acquisition, MFA step-up authentication with full-page prompt, and automatic token refresh on expiry.
+- **Multi-tenant OBO** – Users can switch between tenants they belong to. MFA-required tenants show an authentication prompt with direct ARM token fallback when OBO can't relay claims challenges.
+- **Auth context middleware** – Raw ASGI middleware propagates user tokens to all routes (including plugins and MCP tools) via module globals and context vars, supporting `asyncio.to_thread` and raw `ThreadPoolExecutor` workers.
+- **MCP auth via Bearer token** – VS Code MCP clients can authenticate by passing a Bearer token in the `Authorization` header, acquired via `az account get-access-token`.
+- **OBO tests** – 15 tests covering OBO exchange, MFA claims handling, direct ARM passthrough, CLI fallback, and auth config endpoint.
+
 ### Changed
 
 - **Remote plugin catalog** – Plugin Manager now fetches from `plugin-catalog.az-scout.com` instead of the embedded JSON file (#107).

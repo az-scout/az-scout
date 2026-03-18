@@ -25,6 +25,7 @@ Alternatively run each step with `run_in_terminal`:
 uv run ruff check src/ tests/
 uv run ruff format --check src/ tests/
 uv run mypy src/
+npx -y @biomejs/biome lint .
 uv run pytest
 ```
 

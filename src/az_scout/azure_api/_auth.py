@@ -44,12 +44,61 @@ def _suppress_stderr() -> Generator[None]:
         os.close(original_fd)
 
 
-def _get_headers(tenant_id: str | None = None) -> dict[str, str]:
-    """Return authorization headers using *DefaultAzureCredential*.
+def _get_headers(
+    tenant_id: str | None = None,
+    *,
+    user_token: str | None = None,
+    direct_arm: bool = False,
+) -> dict[str, str]:
+    """Return authorization headers for ARM API calls.
 
-    When *tenant_id* is provided the token is scoped to that tenant.
+    When *user_token* is provided and OBO is configured, performs an
+    On-Behalf-Of token exchange so ARM calls use the **user's** RBAC
+    permissions instead of the app's identity.
+
+    When *user_token* is ``None`` (or OBO is not configured), falls back
+    to ``DefaultAzureCredential`` (local dev / managed identity).
+
+    If explicit *user_token* / *direct_arm* are not supplied, the function
+    checks the per-request context vars set by ``AuthContextMiddleware``.
+
     Tokens are cached in-memory and reused until 2 minutes before expiry.
     """
+    # Fall back to request-scoped auth when explicit params not provided
+    if user_token is None:
+        from az_scout.auth import get_request_auth
+
+        user_token, ctx_direct = get_request_auth()
+        if not direct_arm:
+            direct_arm = ctx_direct
+
+    # OBO path: exchange user token for ARM token
+    if user_token:
+        from az_scout.azure_api._obo import is_obo_enabled, obo_exchange
+
+        if is_obo_enabled():
+            # If the token was acquired directly for ARM (MFA fallback),
+            # use it as-is — no OBO exchange needed.
+            if direct_arm:
+                return {
+                    "Authorization": f"Bearer {user_token}",
+                    "Content-Type": "application/json",
+                }
+            return obo_exchange(user_token, tenant_id=tenant_id)
+
+    # When OBO is configured, require a user token for web requests.
+    # CLI mode (no middleware context) falls through to DefaultAzureCredential.
+    from az_scout.azure_api._obo import is_obo_enabled
+
+    if is_obo_enabled() and not user_token:
+        from az_scout.auth import _in_web_request
+
+        if _in_web_request:
+            from az_scout.azure_api._obo import OboTokenError
+
+            raise OboTokenError("Authentication required", error_code="login_required")
+
+    # Default path: app credential (local dev / managed identity — no OBO)
     cache_key = tenant_id or "_default_"
     with _token_lock:
         cached = _token_cache.get(cache_key)

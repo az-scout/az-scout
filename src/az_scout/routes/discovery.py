@@ -3,10 +3,11 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
 
 from az_scout import azure_api
+from az_scout.auth import get_user_token, is_direct_arm
 from az_scout.models.responses import (
     ErrorResponse,
     RegionInfo,
@@ -24,13 +25,13 @@ logger = logging.getLogger(__name__)
     response_model=TenantListResponse,
     responses={500: {"model": ErrorResponse}},
 )
-async def list_tenants() -> JSONResponse:
-    """Return Azure AD tenants accessible by the current credential.
-
-    Returns all tenants with their authentication status and the default
-    tenant ID for the current auth context.
-    """
-    return JSONResponse(await asyncio.to_thread(azure_api.list_tenants))
+async def list_tenants(request: Request) -> JSONResponse:
+    """Return Azure AD tenants accessible by the current user or credential."""
+    token = get_user_token(request)
+    direct = is_direct_arm(request)
+    return JSONResponse(
+        await asyncio.to_thread(azure_api.list_tenants, user_token=token, direct_arm=direct)
+    )
 
 
 @router.get(
@@ -40,12 +41,19 @@ async def list_tenants() -> JSONResponse:
     responses={500: {"model": ErrorResponse}},
 )
 async def list_subscriptions(
+    request: Request,
     tenantId: str | None = Query(  # noqa: N803
         None, description="Optional tenant ID to scope the query."
     ),
 ) -> JSONResponse:
     """Return all enabled Azure subscriptions, sorted alphabetically."""
-    return JSONResponse(await asyncio.to_thread(azure_api.list_subscriptions, tenantId))
+    token = get_user_token(request)
+    direct = is_direct_arm(request)
+    return JSONResponse(
+        await asyncio.to_thread(
+            azure_api.list_subscriptions, tenantId, user_token=token, direct_arm=direct
+        )
+    )
 
 
 @router.get(
@@ -61,15 +69,24 @@ async def list_subscriptions(
     responses={404: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
 )
 async def list_regions(
+    request: Request,
     subscriptionId: str | None = Query(  # noqa: N803
         None, description="Subscription ID. Auto-discovered if omitted."
     ),
     tenantId: str | None = Query(None, description="Optional tenant ID."),  # noqa: N803
 ) -> JSONResponse:
     """Return Azure regions that support Availability Zones."""
+    token = get_user_token(request)
+    direct = is_direct_arm(request)
     try:
         return JSONResponse(
-            await asyncio.to_thread(azure_api.list_regions, subscriptionId, tenantId)
+            await asyncio.to_thread(
+                azure_api.list_regions,
+                subscriptionId,
+                tenantId,
+                user_token=token,
+                direct_arm=direct,
+            )
         )
     except LookupError as exc:
         logger.warning(
@@ -79,7 +96,12 @@ async def list_regions(
             exc_info=exc,
         )
         return JSONResponse(
-            {"error": "No enabled subscription available for region discovery."},
+            {
+                "error": (
+                    "No enabled subscriptions found. "
+                    "Ensure you have at least Reader access on a subscription in this tenant."
+                )
+            },
             status_code=404,
         )
 
@@ -97,15 +119,24 @@ async def list_regions(
     responses={400: {"model": ErrorResponse}, 502: {"model": ErrorResponse}},
 )
 async def list_locations(
+    request: Request,
     subscriptionId: str | None = Query(  # noqa: N803
         None, description="Subscription ID. Auto-discovered if omitted."
     ),
     tenantId: str | None = Query(None, description="Optional tenant ID."),  # noqa: N803
 ) -> JSONResponse:
     """Return all Azure ARM locations, including those without Availability Zones."""
+    token = get_user_token(request)
+    direct = is_direct_arm(request)
     try:
         return JSONResponse(
-            await asyncio.to_thread(azure_api.list_locations, subscriptionId, tenantId)
+            await asyncio.to_thread(
+                azure_api.list_locations,
+                subscriptionId,
+                tenantId,
+                user_token=token,
+                direct_arm=direct,
+            )
         )
     except LookupError as exc:
         logger.warning(

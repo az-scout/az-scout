@@ -91,6 +91,7 @@ nav:
   - Deployment:
     - ACA Deployment: deployment/aca.md
     - EasyAuth Guide: deployment/easyauth.md
+    - OBO Authentication: deployment/obo-auth.md
   - Architecture: architecture.md
   - Plugins:
     - plugins/index.md

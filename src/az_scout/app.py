@@ -9,6 +9,7 @@ import threading
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,8 +17,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.responses import Response, StreamingResponse
+from starlette.responses import StreamingResponse
 
 from az_scout import __version__, azure_api
 from az_scout.plugin_api import PluginError
@@ -40,8 +40,13 @@ async def _lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     """Warm the tenant cache, reconcile & register plugins, and start the MCP session manager."""
     # Store MCP server ref so route handlers can call reload_plugins()
     _app.state.mcp_server = _mcp_server
-    t = threading.Thread(target=azure_api.preload_discovery, daemon=True)
-    t.start()
+    # In OBO mode, don't preload discovery with app credentials — each user
+    # will authenticate individually and data is fetched with their token.
+    from az_scout.azure_api._obo import is_obo_enabled
+
+    if not is_obo_enabled():
+        t = threading.Thread(target=azure_api.preload_discovery, daemon=True)
+        t.start()
     # Reconcile plugins: reinstall any that are in installed.json but missing
     # from the packages dir (e.g. after a container restart).
     reconcile_installed_plugins()
@@ -95,6 +100,25 @@ async def _generic_error_handler(_request: Request, exc: Exception) -> JSONRespo
     return JSONResponse({"error": str(exc)}, status_code=500)
 
 
+from az_scout.azure_api._obo import OboTokenError  # noqa: E402
+
+
+@app.exception_handler(OboTokenError)
+async def _obo_error_handler(_request: Request, exc: OboTokenError) -> JSONResponse:
+    """Return 401 with claims challenge or direct-auth signal for OBO errors."""
+    if exc.error_code == "claims_challenge":
+        return JSONResponse(
+            {"error": "claims_challenge", "claims": exc.claims},
+            status_code=401,
+        )
+    if exc.error_code == "mfa_direct_auth":
+        return JSONResponse(
+            {"error": "mfa_direct_auth"},
+            status_code=401,
+        )
+    return JSONResponse({"error": str(exc)}, status_code=401)
+
+
 # ---------------------------------------------------------------------------
 # Plugin error boundary – catches PluginError and subclasses, returns
 # {"error": …, "detail": …} with the status code from the exception.
@@ -123,25 +147,87 @@ _CSP_POLICY = "; ".join(
         "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net d3js.org",
         "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net",
         "font-src 'self' cdn.jsdelivr.net",
-        "img-src 'self' data:",
-        "connect-src 'self' cdn.jsdelivr.net",
+        "img-src 'self' data: https://github.com https://*.githubusercontent.com",
+        "connect-src 'self' cdn.jsdelivr.net https://login.microsoftonline.com"
+        " https://plugin-catalog.az-scout.com",
+        "frame-src 'self' https://login.microsoftonline.com",
         "frame-ancestors 'none'",
     ]
 )
 
 
-class _CSPMiddleware(BaseHTTPMiddleware):
-    """Add Content-Security-Policy header to all HTML responses."""
+class _CSPMiddleware:
+    """Add Content-Security-Policy header to all HTML responses.
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        response = await call_next(request)
-        ct = response.headers.get("content-type", "")
-        if "text/html" in ct:
-            response.headers["Content-Security-Policy"] = _CSP_POLICY
-        return response
+    Uses raw ASGI instead of BaseHTTPMiddleware to preserve contextvars
+    propagation through the middleware chain.
+    """
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_csp(message: Any) -> None:
+            if message["type"] == "http.response.start":
+                headers = dict(message.get("headers", []))
+                ct = headers.get(b"content-type", b"").decode("latin-1", errors="replace")
+                if "text/html" in ct:
+                    h = list(message.get("headers", []))
+                    h.append((b"content-security-policy", _CSP_POLICY.encode("latin-1")))
+                    message = {**message, "headers": h}
+            await send(message)
+
+        await self.app(scope, receive, send_with_csp)
 
 
 app.add_middleware(_CSPMiddleware)
+
+
+# ---------------------------------------------------------------------------
+# Auth context middleware – populates contextvars for the current request
+# so _get_headers() can read user_token/direct_arm without explicit params.
+#
+# Uses a raw ASGI middleware instead of BaseHTTPMiddleware because Starlette's
+# BaseHTTPMiddleware runs call_next in a separate anyio task, which breaks
+# contextvars propagation to route handlers.
+# ---------------------------------------------------------------------------
+
+from az_scout.auth import clear_request_auth, set_request_auth  # noqa: E402
+
+
+class _AuthContextMiddleware:
+    """Raw ASGI middleware that sets auth context for the current request."""
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] not in ("http", "websocket"):
+            await self.app(scope, receive, send)
+            return
+
+        token_value: str | None = None
+        direct = False
+        for name, value in scope.get("headers", []):
+            if name == b"authorization":
+                val = value.decode("latin-1")
+                if val.startswith("Bearer "):
+                    token_value = val[7:]
+            elif name == b"x-direct-arm":
+                direct = value == b"true"
+
+        tokens = set_request_auth(token_value, direct)
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            clear_request_auth(tokens)
+
+
+app.add_middleware(_AuthContextMiddleware)
 
 app.mount("/static", StaticFiles(directory=str(_PKG_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(_PKG_DIR / "templates"))
@@ -162,7 +248,11 @@ from az_scout.mcp_server import mcp as _mcp_server  # noqa: E402
 # "/mcp" endpoint (instead of the default "/mcp/mcp").
 _mcp_server.settings.streamable_http_path = "/"
 _mcp_starlette = _mcp_server.streamable_http_app()
-app.mount("/mcp", _mcp_starlette)
+
+# Wrap the MCP sub-app with the auth middleware so MCP tool calls
+# also pick up the user token from the request headers.
+_mcp_with_auth = _AuthContextMiddleware(_mcp_starlette)
+app.mount("/mcp", _mcp_with_auth)
 
 
 def _ensure_fresh_session_manager() -> None:
@@ -219,6 +309,28 @@ async def index(request: Request) -> HTMLResponse:
             "chat_enabled": is_chat_enabled(),
             "plugins": get_plugin_metadata(),
         },
+    )
+
+
+@app.get("/api/auth/config", tags=["Auth"], summary="Get auth configuration")
+async def auth_config() -> JSONResponse:
+    """Return MSAL configuration for frontend login.
+
+    Returns the client ID, authority, and scopes needed for MSAL.js.
+    When OBO is not configured, returns ``{"enabled": false}``.
+    """
+    from az_scout.azure_api._obo import CLIENT_ID, is_obo_enabled
+
+    if not is_obo_enabled():
+        return JSONResponse({"enabled": False})
+
+    return JSONResponse(
+        {
+            "enabled": True,
+            "clientId": CLIENT_ID,
+            "authority": "https://login.microsoftonline.com/organizations",
+            "scopes": [f"api://{CLIENT_ID}/access_as_user"],
+        }
     )
 
 

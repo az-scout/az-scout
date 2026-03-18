@@ -25,7 +25,8 @@ src/az_scout/
 ├── azure_api/          # Shared Azure ARM logic (auth, pagination, data functions)
 │   ├── __init__.py     # Public API surface (PLUGIN_API_VERSION, __all__)
 │   ├── _arm.py         # arm_get/arm_post/arm_paginate + get_headers (public)
-│   ├── _auth.py        # DefaultAzureCredential, _get_headers (internal)
+│   ├── _auth.py        # DefaultAzureCredential, _get_headers, OBO fallback (internal)
+│   ├── _obo.py         # On-Behalf-Of token exchange via MSAL (internal)
 │   ├── _pagination.py  # Legacy _paginate (internal, use arm_paginate instead)
 │   ├── discovery.py    # Tenants, subscriptions, regions
 │   ├── skus.py         # SKU catalogue + zone mappings
@@ -73,6 +74,18 @@ tests/
 - API base URL: `https://management.azure.com`.
 - Handle pagination (`nextLink`) via `arm_paginate()` for list endpoints.
 - Per-subscription errors should be included in the response (not fail the whole request).
+
+## OBO (On-Behalf-Of) authentication
+
+When `AZ_SCOUT_CLIENT_ID` and `AZ_SCOUT_CLIENT_SECRET` are set, OBO mode is activated:
+
+- **Web requests** require a Bearer token (from MSAL.js) in the `Authorization` header. Without it, `_get_headers()` raises `OboTokenError("Authentication required")`.
+- **CLI mode** (`az-scout chat`, `az-scout mcp --stdio`) has no HTTP middleware, so `_get_headers()` falls back to `DefaultAzureCredential`.
+- **Auth context propagation**: The `_AuthContextMiddleware` (raw ASGI) extracts the user token and sets both a module-level global and context vars. The global handles raw `ThreadPoolExecutor` workers (e.g. ODCR plugin), context vars handle `asyncio.to_thread`.
+- **MFA handling**: OBO returns `claims_challenge` or `mfa_direct_auth` as 401 error codes. The frontend shows an MFA prompt or falls back to direct ARM token acquisition.
+- **Direct ARM tokens**: When `X-Direct-ARM: true` header is present, `_get_headers()` skips OBO and uses the token as-is (it's already ARM-scoped).
+- **OBO token cache**: Keyed by full token hash + tenant (not just first 20 chars) to prevent cross-user cache pollution.
+- **`OboTokenError`**: Exception with `error_code` and optional `claims` fields. Handled by a dedicated exception handler in `app.py` returning 401 responses.
 
 ## MCP tools reference
 

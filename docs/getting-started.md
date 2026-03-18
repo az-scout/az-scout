@@ -97,6 +97,9 @@ This guide covers everything you need to install and run az-scout.
     **Entra ID authentication (EasyAuth):**
     See [EasyAuth guide](deployment/easyauth.md) for a complete walkthrough.
 
+    **Multi-user authentication (OBO):**
+    For shared instances where each user needs their own Azure RBAC permissions, see the [OBO Authentication guide](deployment/obo-auth.md).
+
 ---
 
 ## CLI Reference
