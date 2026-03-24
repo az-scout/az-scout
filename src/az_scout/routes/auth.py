@@ -212,6 +212,14 @@ async def login_start(request: Request, tenant: str | None = None) -> RedirectRe
     return RedirectResponse(auth_url)
 
 
+@router.get("/auth/login/admin", include_in_schema=False)
+async def login_admin(request: Request) -> RedirectResponse:
+    """Redirect to Microsoft login targeting the app's home tenant (for Admin role)."""
+    from az_scout.azure_api._obo import TENANT_ID
+
+    return await login_start(request, tenant=TENANT_ID or None)
+
+
 @router.get("/auth/callback", include_in_schema=False)
 async def auth_callback(
     request: Request,
@@ -315,6 +323,13 @@ async def auth_callback(
     except Exception as exc:
         logger.warning("Tenant list fetch at login failed: %s", exc)
 
+    # Look up the display name for the login tenant
+    tenant_name = home_tenant
+    for t in user_tenants:
+        if t["id"] == home_tenant:
+            tenant_name = t.get("name", home_tenant)
+            break
+
     # Create session
     _cleanup_expired()
     session_id = secrets.token_urlsafe(32)
@@ -324,6 +339,7 @@ async def auth_callback(
         "user_name": user_name,
         "user_email": user_email,
         "tenant_id": home_tenant,
+        "tenant_name": tenant_name,
         "is_admin": is_admin,
         "roles": roles,
         "tenants": user_tenants,
@@ -373,6 +389,7 @@ async def auth_me(request: Request) -> JSONResponse:
             "name": session.get("user_name", ""),
             "email": session.get("user_email", ""),
             "tenantId": session.get("tenant_id", ""),
+            "tenantName": session.get("tenant_name", ""),
             "isAdmin": session.get("is_admin", False),
         }
     )

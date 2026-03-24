@@ -28,6 +28,19 @@
                 if (_userInfo?.isAdmin) {
                     document.body.classList.add("is-admin");
                 }
+
+                // In OBO mode, replace tenant selector with fixed tenant label
+                if (_userInfo?.authenticated && _userInfo?.tenantId) {
+                    const tenantSection = document.getElementById("tenant-section");
+                    const tenantSelect = document.getElementById("tenant-select");
+                    if (tenantSection && tenantSelect) {
+                        const name = _userInfo.tenantName || _userInfo.tenantId.slice(0, 8) + "\u2026";
+                        tenantSelect.innerHTML = `<option value="${_userInfo.tenantId}">${name}</option>`;
+                        tenantSelect.value = _userInfo.tenantId;
+                        tenantSelect.disabled = true;
+                        tenantSelect.classList.add("no-arrow");
+                    }
+                }
             } catch (err) {
                 console.warn("Auth init failed:", err);
             }

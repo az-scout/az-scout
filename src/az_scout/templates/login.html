@@ -10,7 +10,7 @@
     <style>
         body { min-height: 100vh; display: flex; flex-direction: column; }
         .login-container { flex: 1; display: flex; align-items: center; justify-content: center; }
-        .login-card { max-width: 420px; width: 100%; text-align: center; }
+        .login-card { max-width: 640px; width: 100%; text-align: center; }
         footer { font-size: 0.8rem; }
     </style>
     <script>
@@ -27,6 +27,11 @@
             <img src="/static/img/favicon.svg" width="24" height="24" alt="">
             <span>Azure Scout</span>
         </a>
+        {% if home_tenant %}
+        <a href="/auth/login/admin" class="btn btn-outline-secondary btn-sm" title="Sign in as Admin">
+            <i class="bi bi-shield-lock me-1"></i> Admin
+        </a>
+        {% endif %}
     </nav>
 
     <!-- Login card -->
@@ -57,15 +62,36 @@
             </div>
             {% endif %}
 
-            <a href="/auth/login/start{% if tenant %}?tenant={{ tenant }}{% endif %}" class="btn btn-primary btn-lg w-100 mb-3">
-                <i class="bi bi-microsoft me-2"></i> Sign in with Microsoft
-            </a>
-
-            {% if home_tenant %}
-            <a href="/auth/login/start?tenant={{ home_tenant }}" class="btn btn-outline-secondary btn-sm w-100 mb-3">
-                <i class="bi bi-shield-lock me-2"></i> Sign in as Admin (home tenant)
-            </a>
-            {% endif %}
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-md-6">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-body-secondary small mb-2">
+                            Sign in with your default Microsoft account. Azure will use your home tenant automatically.
+                        </div>
+                        <a href="/auth/login/start" class="btn btn-primary btn-sm w-100">
+                            <i class="bi bi-person-fill me-1"></i> Sign in with your account
+                        </a>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-body-secondary small mb-2">
+                            Sign in to a specific tenant by entering its domain or ID. Use this to access a different organization.
+                        </div>
+                        <form action="/auth/login/start" method="get">
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" name="tenant"
+                                       placeholder="contoso.com or tenant ID"
+                                       aria-label="Tenant ID or domain"
+                                       value="{{ tenant }}">
+                                <button class="btn btn-outline-primary" type="submit">
+                                    <i class="bi bi-box-arrow-in-right me-1"></i> Sign in
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
 
             <p class="text-body-secondary small">
                 Your Azure RBAC permissions determine what you can access.

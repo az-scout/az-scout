@@ -174,6 +174,7 @@ class TestOboExceptionHandler:
     """Tests for the OboTokenError exception handler in app.py."""
 
     def test_claims_challenge_returns_401_with_claims(self, obo_client: TestClient) -> None:
+        """OBO claims challenge on a subscription call returns 401."""
         mock_app = MagicMock()
         mock_app.acquire_token_on_behalf_of.return_value = {
             "error": "invalid_grant",
@@ -182,7 +183,7 @@ class TestOboExceptionHandler:
         }
         with patch("az_scout.azure_api._obo._get_msal_app", return_value=mock_app):
             resp = obo_client.get(
-                "/api/tenants",
+                "/api/subscriptions",
                 headers={"Authorization": "Bearer fake-token"},
             )
         assert resp.status_code == 401
@@ -191,6 +192,7 @@ class TestOboExceptionHandler:
         assert data["claims"] == '{"test":"claims"}'
 
     def test_mfa_direct_auth_returns_401(self, obo_client: TestClient) -> None:
+        """OBO MFA without claims on a subscription call returns 401."""
         mock_app = MagicMock()
         mock_app.acquire_token_on_behalf_of.return_value = {
             "error": "invalid_grant",
@@ -198,7 +200,7 @@ class TestOboExceptionHandler:
         }
         with patch("az_scout.azure_api._obo._get_msal_app", return_value=mock_app):
             resp = obo_client.get(
-                "/api/tenants",
+                "/api/subscriptions",
                 headers={"Authorization": "Bearer fake-token"},
             )
         assert resp.status_code == 401
