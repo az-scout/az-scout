@@ -331,6 +331,7 @@ def get_plugin_metadata() -> list[dict[str, Any]]:
     for p in _loaded_plugins:
         tabs = p.get_tabs() or []
         modes = p.get_chat_modes() or []
+        actions = (p.get_navbar_actions() if hasattr(p, "get_navbar_actions") else None) or []
         internal = _is_internal(p)
         result.append(
             {
@@ -358,6 +359,17 @@ def get_plugin_metadata() -> list[dict[str, Any]]:
                         "welcome_message": m.welcome_message,
                     }
                     for m in modes
+                ],
+                "navbar_actions": [
+                    {
+                        "id": a.id,
+                        "icon": a.icon,
+                        "label": a.label,
+                        "js_entry": a.js_entry,
+                        "css_entry": a.css_entry,
+                        "width": a.width,
+                    }
+                    for a in actions
                 ],
             }
         )

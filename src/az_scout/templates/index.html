@@ -17,6 +17,11 @@
     <link rel="stylesheet" href="{{ p.static_prefix }}/{{ tab.css_entry }}">
     {% endif %}
     {% endfor %}
+    {% for action in p.navbar_actions %}
+    {% if action.css_entry %}
+    <link rel="stylesheet" href="{{ p.static_prefix }}/{{ action.css_entry }}">
+    {% endif %}
+    {% endfor %}
     {% endfor %}
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
@@ -40,6 +45,15 @@
                 <i class="bi bi-box-arrow-right"></i>
             </a>
             {% endif %}
+            {% for p in plugins %}
+            {% for action in p.navbar_actions %}
+            <button type="button" class="btn btn-sm btn-outline-secondary"
+                    id="{{ action.id }}-navbar-btn" title="{{ action.label }}"
+                    data-bs-toggle="offcanvas" data-bs-target="#{{ action.id }}-offcanvas">
+                <i class="{{ action.icon }}"></i>
+            </button>
+            {% endfor %}
+            {% endfor %}
             <button type="button" class="btn btn-sm btn-outline-secondary" id="plugin-manager-btn"
                     title="Plugin Manager" data-bs-toggle="offcanvas" data-bs-target="#pluginOffcanvas">
                 <i class="bi bi-puzzle"></i>
@@ -166,6 +180,24 @@
     </div>
 </div>
 
+<!-- ===== Plugin Navbar-Action Offcanvas Panels ===== -->
+{% for p in plugins %}
+{% for action in p.navbar_actions %}
+<div class="offcanvas offcanvas-end" tabindex="-1" id="{{ action.id }}-offcanvas"
+     aria-labelledby="{{ action.id }}-offcanvas-label" style="width:{{ action.width }}px;">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="{{ action.id }}-offcanvas-label">
+            <i class="{{ action.icon }} me-2"></i>{{ action.label }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body" id="{{ action.id }}-offcanvas-body">
+        <!-- Populated by {{ action.js_entry }} -->
+    </div>
+</div>
+{% endfor %}
+{% endfor %}
+
 <!-- ===== About Modal ===== -->
 <div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="aboutModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -288,6 +320,9 @@
 {% for p in plugins %}
 {% for tab in p.tabs %}
 <script src="{{ p.static_prefix }}/{{ tab.js_entry }}"></script>
+{% endfor %}
+{% for action in p.navbar_actions %}
+<script src="{{ p.static_prefix }}/{{ action.js_entry }}"></script>
 {% endfor %}
 {% endfor %}
 <script>

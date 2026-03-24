@@ -13,7 +13,7 @@ from typing import Any
 from fastapi import APIRouter
 
 from az_scout import __version__
-from az_scout.plugin_api import AzScoutPlugin, ChatMode, TabDefinition
+from az_scout.plugin_api import AzScoutPlugin, ChatMode, NavbarAction, TabDefinition
 
 _STATIC_DIR = Path(__file__).parent / "static"
 
@@ -50,6 +50,9 @@ class TopologyPlugin:
         ]
 
     def get_chat_modes(self) -> list[ChatMode] | None:
+        return None
+
+    def get_navbar_actions(self) -> list[NavbarAction] | None:
         return None
 
 
