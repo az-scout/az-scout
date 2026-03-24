@@ -288,6 +288,33 @@ async def auth_callback(
         TENANT_ID,
     )
 
+    # Fetch user's tenant list at login time using OBO against the app's
+    # home tenant (where consent is granted).  The /tenants ARM endpoint is
+    # globally scoped — it returns all tenants the user belongs to regardless
+    # of which tenant authority is used for the OBO exchange.
+    user_tenants: list[dict[str, str]] = []
+    try:
+        from az_scout.azure_api._obo import obo_exchange
+
+        arm_headers = obo_exchange(result["access_token"], tenant_id=TENANT_ID)
+        import requests as _requests
+
+        arm_resp = _requests.get(
+            "https://management.azure.com/tenants?api-version=2022-12-01",
+            headers=arm_headers,
+            timeout=15,
+        )
+        if arm_resp.status_code == 200:
+            for t in arm_resp.json().get("value", []):
+                user_tenants.append(
+                    {"id": t["tenantId"], "name": t.get("displayName") or t["tenantId"]}
+                )
+            logger.info("Fetched %d tenants for user at login", len(user_tenants))
+        else:
+            logger.warning("Tenant list fetch at login failed: HTTP %d", arm_resp.status_code)
+    except Exception as exc:
+        logger.warning("Tenant list fetch at login failed: %s", exc)
+
     # Create session
     _cleanup_expired()
     session_id = secrets.token_urlsafe(32)
@@ -299,6 +326,7 @@ async def auth_callback(
         "tenant_id": home_tenant,
         "is_admin": is_admin,
         "roles": roles,
+        "tenants": user_tenants,
         "expires_at": time.time() + _SESSION_TTL,
     }
 

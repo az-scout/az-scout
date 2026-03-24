@@ -39,11 +39,51 @@ def list_tenants(
             return cached  # type: ignore[return-value]
 
     url = f"{AZURE_MGMT_URL}/tenants?api-version={AZURE_API_VERSION}"
-    all_tenants = arm_paginate(
-        url,
-        tenant_id=tenant_id,
-        user_token=user_token,
-    )
+    try:
+        all_tenants = arm_paginate(
+            url,
+            tenant_id=tenant_id,
+            user_token=user_token,
+        )
+    except Exception as exc:
+        if user_token:
+            # OBO failed (e.g. consent not granted in user's home tenant).
+            # Return the tenant list from the session (fetched at login time
+            # using OBO against the app's home tenant where consent IS granted).
+            from az_scout.routes.auth import _sessions
+
+            # Find the session that holds this user_token
+            for session in _sessions.values():
+                session_tenants = session.get("tenants", [])
+                if session_tenants and session.get("access_token") == user_token:
+                    logger.debug(
+                        "Tenant list OBO failed; using %d tenants from session",
+                        len(session_tenants),
+                    )
+                    tenant_list = [
+                        {
+                            "id": t["id"],
+                            "name": t.get("name", t["id"]),
+                            "authenticated": True,
+                        }
+                        for t in session_tenants
+                    ]
+                    default_tid = session.get("tenant_id", "")
+                    return {
+                        "tenants": sorted(tenant_list, key=lambda x: x["name"].lower()),
+                        "defaultTenantId": default_tid,
+                    }
+            # No session found with tenants — fall back to user's home tenant
+            from az_scout.azure_api._obo import _extract_tid
+
+            user_tid = _extract_tid(user_token)
+            if user_tid:
+                logger.warning("Tenant list OBO failed; returning home tenant only: %s", exc)
+                return {
+                    "tenants": [{"id": user_tid, "name": user_tid, "authenticated": True}],
+                    "defaultTenantId": user_tid,
+                }
+        raise
 
     tenant_ids = [t["tenantId"] for t in all_tenants]
 

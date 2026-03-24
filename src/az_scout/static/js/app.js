@@ -269,12 +269,22 @@ async function fetchTenants() {
             defaultTenantId: defaultTid,
             tenantId: select.value || "",
         });
-    } catch {
-        document.getElementById("tenant-section").classList.add("d-none");
+    } catch (err) {
+        if (!err) return; // redirect in progress
+        // Show the error overlay with the auth error
+        // Use home tenant from session if available
+        const homeTid = window.azScoutAuth?.getHomeTenantId?.() || "";
+        if (homeTid) {
+            // Populate tenant selector with home tenant so the overlay shows the tenant name
+            tenants = [{ id: homeTid, name: homeTid.slice(0, 8) + "\u2026", authenticated: true }];
+            select.innerHTML = `<option value="${homeTid}">Tenant ${escapeHtml(homeTid.slice(0, 8))}\u2026</option>`;
+            select.value = homeTid;
+        }
+        _showAuthError(homeTid, err.message);
         emitContextEvent("azscout:tenants-loaded", {
-            tenants: [],
-            defaultTenantId: "",
-            tenantId: "",
+            tenants,
+            defaultTenantId: homeTid,
+            tenantId: homeTid,
         });
     }
 }
