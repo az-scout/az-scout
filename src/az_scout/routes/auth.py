@@ -48,7 +48,7 @@ def _build_redirect_uri(request: Request) -> str:
 
 # In-memory session store: session_id → session data
 _sessions: dict[str, dict[str, Any]] = {}
-_SESSION_TTL = 7200  # 2 hours
+_SESSION_TTL = 28800  # 8 hours (a workday)
 _COOKIE_NAME = "az_scout_sid"
 
 # CSRF nonces for OAuth state parameter: nonce → {tenant, expires_at}
@@ -81,7 +81,10 @@ def _cleanup_expired() -> None:
 
 
 def get_session(request: Request) -> dict[str, Any] | None:
-    """Get the current user's session from the cookie, or None."""
+    """Get the current user's session from the cookie, or None.
+
+    Uses sliding expiry: each access extends the session TTL.
+    """
     from az_scout.azure_api._obo import CLIENT_SECRET
 
     cookie = request.cookies.get(_COOKIE_NAME)
@@ -96,6 +99,8 @@ def get_session(request: Request) -> dict[str, Any] | None:
     if session.get("expires_at", 0) < time.time():
         del _sessions[session_id]
         return None
+    # Sliding expiry: extend session on each access
+    session["expires_at"] = time.time() + _SESSION_TTL
     return session
 
 
