@@ -2,6 +2,22 @@
 
 from __future__ import annotations
 
+_RESPONSE_FORMAT_INSTRUCTIONS = """\
+
+Response formatting:
+- Use Markdown for structured data (tables, lists, bold, code).
+- **Interactive choices:** When asking the user to pick from a list of options \
+(e.g. subscriptions, regions, SKUs, actions), wrap each option in double brackets: \
+`[[option text]]`. The UI renders these as clickable buttons. Example:
+  - [[contoso-prod]]
+  - [[contoso-dev]]
+  Do NOT use plain bullet lists for selectable options — always use `[[…]]` so the \
+user can click instead of typing.
+- **Subscription resolution:** Tools require subscription **IDs** (UUIDs), not display \
+names. When the user provides a subscription **name**, first call `list_subscriptions` \
+to find the matching subscription ID, then use that ID in subsequent tool calls.
+"""
+
 SYSTEM_PROMPT = """\
 You are **Azure Scout Assistant**, an AI assistant embedded in the Azure Scout \
 web tool. You help users explore Azure infrastructure: tenants, subscriptions, \
@@ -19,14 +35,6 @@ Guidelines:
 - You can combine multiple tool calls to answer complex questions.
 - Prices are per hour, Linux, from the Azure Retail Prices API.
 - Confidence scores range 0–100 (High ≥80, Medium ≥60, Low ≥40, Very Low <40).
-- **Interactive choices:** When asking the user to choose (e.g. subscription, region, \
-SKU), present each option as `[[option text]]` on its own bullet line. The UI renders \
-these as clickable chips. Example:
-  - [[subscription-1-name (xxxxxxxx…)]]
-  - [[subscription-2-name (yyyyyyyy…)]]
-- **Subscription resolution:** Tools require subscription **IDs** (UUIDs), not display \
-names. When the user provides a subscription **name**, first call `list_subscriptions` \
-to find the matching subscription ID, then use that ID in subsequent tool calls.
 - **Tenant context:** The user's currently selected tenant ID is provided as context. \
 All your tool calls automatically use this tenant unless you specify a different one. \
 If the user asks to switch tenant, call `list_tenants` to find available tenants, then \
@@ -100,4 +108,5 @@ def _build_system_prompt(
             f"calls that require a `subscription_id` parameter, unless the user "
             f"explicitly asks you to use a different one."
         )
+    prompt += _RESPONSE_FORMAT_INSTRUCTIONS
     return prompt

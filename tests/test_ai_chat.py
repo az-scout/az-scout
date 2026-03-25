@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 from az_scout.internal_plugins.planner.chat_mode import PLANNER_CHAT_MODE
 from az_scout.services.ai_chat import (
-    SYSTEM_PROMPT,
     TOOL_DEFINITIONS,
     _build_openai_tools,
     _build_system_prompt,
@@ -83,8 +82,9 @@ class TestBuildSystemPrompt:
         assert "Spot" in prompt
 
     def test_assistant_prompt_contains_guidelines(self):
-        assert "Interactive choices" in SYSTEM_PROMPT
-        assert "Subscription resolution" in SYSTEM_PROMPT
+        prompt = _build_system_prompt()
+        assert "Interactive choices" in prompt
+        assert "Subscription resolution" in prompt
 
 
 # ---------------------------------------------------------------------------

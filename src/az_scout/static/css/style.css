@@ -198,6 +198,8 @@ select.no-arrow {
     line-height: 1.45;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    max-width: 100%;
+    overflow-x: auto;
 }
 
 .chat-message.user .chat-bubble {

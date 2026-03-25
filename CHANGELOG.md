@@ -12,6 +12,14 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 - **Plugin uninstall in ACA** – `uv pip uninstall` now appends `--system` when running outside a virtual environment (e.g. in Azure Container Apps), fixing `No virtual environment found` errors (#115).
 - **Plugin compatibility** – Plugin protocol check now uses a lenient attribute check instead of `isinstance(obj, AzScoutPlugin)`. Plugins missing newer optional methods (e.g. `get_navbar_actions`) load correctly again (#116).
 - **Broken versioning** – Removed non-CalVer tag (`obo-single-tenant-v1`) that caused `hatch-vcs` to produce `2.dev4` instead of `2026.3.x.devN` (#117).
+- **Chat tables overflow** – Tables in chat bubbles now scroll horizontally instead of overflowing outside the panel.
+
+### Added
+
+- **Chat pin/open persistence** – Chat panel pinned state and open/closed state are saved to localStorage and restored on reload.
+- **Chat h1 rendering** – Markdown `# heading` (h1) is now rendered in chat bubbles (previously only `##` and `###` were handled).
+- **Clickable choices for all chat modes** – The `[[option]]` formatting instruction is now appended to all chat modes (including plugin-contributed modes like ODCR Advisor), so LLM responses consistently use clickable chips for selectable options.
+- **Chat history for plugin modes** – `_restoreChatHistory` now restores all saved modes (including plugin-contributed ones), not just `discussion` and `planner`.
 
 ### Added
 

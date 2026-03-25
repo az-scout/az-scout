@@ -20,6 +20,8 @@ const _CHAT_STORAGE_KEY = "azm-chat-history";
 const _CHAT_PERSIST_KEY = "azm-chat-persist";
 const _CHAT_INPUT_HIST_KEY = "azm-chat-input-history";
 const _CHAT_MODE_KEY = "azm-chat-mode";
+const _CHAT_PINNED_KEY = "azm-chat-pinned";
+const _CHAT_OPEN_KEY = "azm-chat-open";
 
 // Per-mode conversation state: { discussion: {messages, inputHistory}, planner: {messages, inputHistory} }
 const _chatModeState = {
@@ -50,13 +52,15 @@ function toggleChatPanel() {
     const panel = document.getElementById("chat-panel");
     if (!panel) return;
     panel.classList.toggle("d-none");
-    if (!panel.classList.contains("d-none")) {
+    const isOpen = !panel.classList.contains("d-none");
+    if (isOpen) {
         document.getElementById("chat-input")?.focus();
     }
     // If pinned and closing, unpin
-    if (panel.classList.contains("d-none") && _chatPinned) {
+    if (!isOpen && _chatPinned) {
         _setChatPinned(false);
     }
+    try { localStorage.setItem(_CHAT_OPEN_KEY, isOpen ? "1" : "0"); } catch {}
 }
 
 // ---------------------------------------------------------------------------
@@ -137,6 +141,7 @@ function toggleChatPin() {
 
 function _setChatPinned(pinned) {
     _chatPinned = pinned;
+    try { localStorage.setItem(_CHAT_PINNED_KEY, _chatPinned ? "1" : "0"); } catch {}
     document.body.classList.toggle("chat-pinned", _chatPinned);
     const btn = document.getElementById("chat-pin-btn");
     if (btn) {
@@ -208,7 +213,10 @@ function _restoreChatHistory() {
 
         // Restore saved mode
         const savedMode = localStorage.getItem(_CHAT_MODE_KEY);
-        if (savedMode && (savedMode === "discussion" || savedMode === "planner")) {
+        if (savedMode) {
+            if (!_chatModeState[savedMode]) {
+                _chatModeState[savedMode] = { messages: [], inputHistory: [] };
+            }
             _chatMode = savedMode;
             document.querySelectorAll("#chat-mode-toggle button").forEach(b => {
                 b.classList.toggle("active", b.dataset.mode === _chatMode);
@@ -226,10 +234,17 @@ function _restoreChatHistory() {
                     // Legacy: migrate old format into discussion mode
                     _chatModeState.discussion.messages = state;
                 } else if (state && typeof state === "object") {
-                    // Support old "assistant" key for backward compat
-                    const disc = state.discussion || state.assistant;
-                    if (disc?.messages) _chatModeState.discussion = disc;
-                    if (state.planner?.messages) _chatModeState.planner = state.planner;
+                    // Restore all mode states (discussion, planner, plugin modes)
+                    for (const [mode, data] of Object.entries(state)) {
+                        // Support old "assistant" key → map to "discussion"
+                        const targetMode = mode === "assistant" ? "discussion" : mode;
+                        if (data?.messages) {
+                            if (!_chatModeState[targetMode]) {
+                                _chatModeState[targetMode] = { messages: [], inputHistory: [] };
+                            }
+                            _chatModeState[targetMode] = data;
+                        }
+                    }
                 }
 
                 // Load current mode's state
@@ -263,6 +278,17 @@ function _restoreChatHistory() {
             input.placeholder = _chatMode === "planner"
                 ? "Describe your deployment needs…"
                 : "Ask about Azure SKUs, zones, pricing…";
+        }
+
+        // Restore pinned state
+        if (localStorage.getItem(_CHAT_PINNED_KEY) === "1") {
+            _setChatPinned(true);
+        }
+
+        // Restore open state
+        const panel = document.getElementById("chat-panel");
+        if (panel && localStorage.getItem(_CHAT_OPEN_KEY) === "1") {
+            panel.classList.remove("d-none");
         }
     } catch {}
 }
@@ -677,6 +703,7 @@ function _renderMarkdown(md) {
     // Headers (## and ###)
     html = html.replace(/^### (.+)$/gm, '<h6 class="mt-2 mb-1">$1</h6>');
     html = html.replace(/^## (.+)$/gm, '<h5 class="mt-2 mb-1">$1</h5>');
+    html = html.replace(/^# (.+)$/gm, '<h4 class="mt-2 mb-1">$1</h4>');
     // Horizontal rule
     html = html.replace(/^---$/gm, "<hr>");
 
