@@ -56,6 +56,18 @@ class ChatMode:
     welcome_message: str  # markdown shown on mode activation
 
 
+@dataclass
+class NavbarAction:
+    """Describes a navbar button + offcanvas panel contributed by a plugin."""
+
+    id: str  # unique ID, e.g. "bdd-sku"
+    icon: str  # Bootstrap icon class, e.g. "bi bi-database"
+    label: str  # tooltip + offcanvas header, e.g. "SKU DB Cache"
+    js_entry: str  # relative path to JS file inside the plugin's static dir
+    css_entry: str | None = None  # optional CSS file path
+    width: int = 480  # offcanvas panel width in px
+
+
 @runtime_checkable
 class AzScoutPlugin(Protocol):
     """Protocol that every az-scout plugin must satisfy.
@@ -71,6 +83,7 @@ class AzScoutPlugin(Protocol):
     def get_static_dir(self) -> Path | None: ...
     def get_tabs(self) -> list[TabDefinition] | None: ...
     def get_chat_modes(self) -> list[ChatMode] | None: ...
+    def get_navbar_actions(self) -> list[NavbarAction] | None: ...
 
 
 @runtime_checkable

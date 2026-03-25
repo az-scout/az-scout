@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import APIRouter
 
-from az_scout.plugin_api import AzScoutPlugin, ChatMode, TabDefinition
+from az_scout.plugin_api import AzScoutPlugin, ChatMode, NavbarAction, TabDefinition
 from az_scout.plugins import (
     _loaded_plugins,
     _plugin_chat_modes,
@@ -88,6 +88,9 @@ class FullPlugin:
             )
         ]
 
+    def get_navbar_actions(self) -> list[NavbarAction] | None:
+        return None
+
     def get_system_prompt_addendum(self) -> str | None:
         return "If a user asks about AV* SKUs, interpret it as an AVS-related request."
 
@@ -111,6 +114,9 @@ class MinimalPlugin:
         return None
 
     def get_chat_modes(self) -> list[ChatMode] | None:
+        return None
+
+    def get_navbar_actions(self) -> list[NavbarAction] | None:
         return None
 
 

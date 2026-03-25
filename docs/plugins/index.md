@@ -51,7 +51,7 @@ python3 tools/plugin-scaffold/create_plugin.py
 Every plugin must expose an object with these attributes:
 
 ```python
-from az_scout.plugin_api import AzScoutPlugin, TabDefinition, ChatMode
+from az_scout.plugin_api import AzScoutPlugin, TabDefinition, ChatMode, NavbarAction
 
 class MyPlugin:
     name = "my-plugin"    # unique identifier
@@ -62,6 +62,7 @@ class MyPlugin:
     def get_static_dir(self) -> Path | None: ...
     def get_tabs(self) -> list[TabDefinition] | None: ...
     def get_chat_modes(self) -> list[ChatMode] | None: ...
+    def get_navbar_actions(self) -> list[NavbarAction] | None: ...
     def get_system_prompt_addendum(self) -> str | None: ...
 
 plugin = MyPlugin()  # module-level instance
@@ -80,6 +81,7 @@ All methods are optional — return `None` to skip a layer.
 | **UI tabs** | `get_tabs()` | `TabDefinition` list — rendered as Bootstrap tabs in the main UI |
 | **Static assets** | `get_static_dir()` | `Path` to a directory, served at `/plugins/{name}/static/` |
 | **Chat modes** | `get_chat_modes()` | `ChatMode` list — added to the chat panel mode toggle |
+| **Navbar actions** | `get_navbar_actions()` | `NavbarAction` list — navbar buttons that open offcanvas panels |
 | **Prompt addendum** | `get_system_prompt_addendum()` | Extra instructions appended to default `discussion` system prompt |
 
 ### TabDefinition
@@ -103,6 +105,63 @@ class ChatMode:
     label: str           # e.g. "Cost Advisor"
     system_prompt: str   # system prompt sent to the LLM
     welcome_message: str # markdown shown when the mode is activated
+```
+
+### NavbarAction
+
+A `NavbarAction` injects a button into the top navbar that opens an offcanvas
+panel. The plugin provides the JS file that populates the panel content.
+
+```python
+@dataclass
+class NavbarAction:
+    id: str                       # unique id, used for DOM ids (e.g. "bdd-sku")
+    icon: str                     # Bootstrap icon class (e.g. "bi bi-database")
+    label: str                    # tooltip + offcanvas header text
+    js_entry: str                 # relative path to JS file in static dir
+    css_entry: str | None = None  # optional CSS file, auto-loaded in <head>
+    width: int = 480              # offcanvas panel width in pixels
+```
+
+The template generates the following DOM elements automatically:
+
+| Element | ID pattern | Description |
+|---------|------------|-------------|
+| Navbar button | `{id}-navbar-btn` | Opens the offcanvas via `data-bs-toggle` |
+| Offcanvas panel | `{id}-offcanvas` | Bootstrap offcanvas container |
+| Offcanvas body | `{id}-offcanvas-body` | Empty `<div>` — populated by your JS |
+
+#### Example usage
+
+```python
+def get_navbar_actions(self) -> list[NavbarAction] | None:
+    return [
+        NavbarAction(
+            id="bdd-sku",
+            icon="bi bi-database",
+            label="SKU DB Cache",
+            js_entry="js/bdd-sku-offcanvas.js",
+        )
+    ]
+```
+
+The JS file should listen for the Bootstrap `show.bs.offcanvas` event to
+lazy-load its content:
+
+```javascript
+(function () {
+    const oc = document.getElementById("bdd-sku-offcanvas");
+    const body = document.getElementById("bdd-sku-offcanvas-body");
+    let loaded = false;
+
+    oc.addEventListener("show.bs.offcanvas", async () => {
+        if (loaded) return;
+        const resp = await fetch("/plugins/bdd-sku/static/html/settings.html");
+        body.innerHTML = await resp.text();
+        loaded = true;
+        // bind event listeners after injection
+    });
+})();
 ```
 
 ---
