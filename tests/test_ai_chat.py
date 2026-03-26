@@ -394,3 +394,37 @@ class TestPostProcessToolResult:
         original = '{"tenants": [{"id": "abc"}]}'
         result = _post_process_tool_result("list_tenants", {}, original)
         assert result == original
+
+
+# ---------------------------------------------------------------------------
+# POST /api/ai/complete  – non-streaming completion endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestAiCompleteEndpoint:
+    """Tests for the /api/ai/complete endpoint."""
+
+    def test_returns_503_when_not_configured(self, client):
+        """Should return 503 when Azure OpenAI is not configured."""
+        resp = client.post(
+            "/api/ai/complete",
+            json={"prompt": "hello"},
+        )
+        assert resp.status_code == 503
+        assert "not configured" in resp.json()["error"]
+
+    def test_accepts_request_body(self, client):
+        """The endpoint should accept all fields without 422."""
+        resp = client.post(
+            "/api/ai/complete",
+            json={
+                "prompt": "test",
+                "system_prompt": "You are a test assistant.",
+                "tenant_id": "tid-1",
+                "region": "eastus",
+                "subscription_id": "sub-1",
+                "tools": False,
+            },
+        )
+        # 503 expected since AI is not configured in tests
+        assert resp.status_code == 503

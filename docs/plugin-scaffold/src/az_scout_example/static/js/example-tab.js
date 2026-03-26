@@ -1,9 +1,13 @@
 // Example plugin tab logic
 // This script runs after app.js and can use its globals:
-//   - apiFetch(url)   – GET helper with error handling
-//   - tenantQS(prefix) – returns "?tenantId=…" or ""
-//   - subscriptions   – array of {id, name} for the current tenant
-//   - regions         – array of {name, displayName}
+//   - apiFetch(url)           – GET helper with error handling
+//   - apiPost(url, body)      – POST helper
+//   - aiComplete(prompt, opts) – non-streaming AI completion (returns {content, tool_calls})
+//   - aiEnabled              – true if AI is configured
+//   - renderMarkdown(md)      – render Markdown to HTML via marked.js
+//   - tenantQS(prefix)        – returns "?tenantId=…" or ""
+//   - subscriptions           – array of {id, name} for the current tenant
+//   - regions                 – array of {name, displayName}
 // Static assets are served at /plugins/{name}/static/
 (function () {
     const PLUGIN_NAME = "example";

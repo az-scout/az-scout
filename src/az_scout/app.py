@@ -416,3 +416,58 @@ async def chat(body: ChatRequest) -> StreamingResponse:
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/ai/complete – Non-streaming AI completion with tool calling
+# ---------------------------------------------------------------------------
+
+
+class CompleteRequest(BaseModel):
+    """Request body for the non-streaming AI completion endpoint."""
+
+    prompt: str
+    system_prompt: str | None = None
+    tenant_id: str | None = None
+    region: str | None = None
+    subscription_id: str | None = None
+    tools: bool = True
+    cache_ttl: int = 300
+
+
+@app.post(
+    "/api/ai/complete",
+    tags=["AI Chat"],
+    summary="Non-streaming AI completion with tool calling",
+    responses={503: {"description": "AI chat not configured"}},
+)
+async def ai_complete_endpoint(body: CompleteRequest) -> JSONResponse:
+    """Run a single-shot AI completion with optional tool calling.
+
+    Returns the final assistant response after all tool calls have been
+    executed server-side.  Designed for plugin routes that need inline
+    AI recommendations outside the chat panel.
+    """
+    if not is_chat_enabled():
+        return JSONResponse(
+            {"error": "AI chat is not configured. Set AZURE_OPENAI_* environment variables."},
+            status_code=503,
+        )
+
+    from az_scout.services.ai_chat import ai_complete
+
+    result = await ai_complete(
+        body.prompt,
+        system_prompt=body.system_prompt,
+        tenant_id=body.tenant_id,
+        region=body.region,
+        subscription_id=body.subscription_id,
+        tools=body.tools,
+        cache_ttl=body.cache_ttl,
+    )
+    return JSONResponse(
+        {
+            "content": result.content,
+            "tool_calls": result.tool_calls,
+        }
+    )

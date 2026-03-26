@@ -11,6 +11,8 @@ Requires environment variables:
 
 from __future__ import annotations
 
+from az_scout.services.ai_chat._complete import CompletionResult as CompletionResult
+from az_scout.services.ai_chat._complete import ai_complete as ai_complete
 from az_scout.services.ai_chat._config import (
     AZURE_OPENAI_API_KEY as AZURE_OPENAI_API_KEY,
 )

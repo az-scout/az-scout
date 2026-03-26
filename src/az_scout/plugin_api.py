@@ -98,6 +98,62 @@ class AzScoutPromptContributor(Protocol):
 
 
 # ---------------------------------------------------------------------------
+# AI completion helper — re-exported for plugin convenience
+# ---------------------------------------------------------------------------
+
+
+def is_ai_enabled() -> bool:
+    """Return True if AI chat/completion is configured and available."""
+    from az_scout.services.ai_chat._config import is_chat_enabled
+
+    return is_chat_enabled()
+
+
+async def plugin_ai_complete(
+    prompt: str,
+    *,
+    system_prompt: str | None = None,
+    tenant_id: str | None = None,
+    region: str | None = None,
+    subscription_id: str | None = None,
+    tools: bool = True,
+    cache_ttl: int = 300,
+) -> dict[str, Any]:
+    """Run a non-streaming AI completion with optional tool calling.
+
+    Convenience wrapper for plugins that need inline AI recommendations
+    outside the chat panel.  Returns a dict with ``content`` (str) and
+    ``tool_calls`` (list).
+
+    Example usage in a plugin route::
+
+        from az_scout.plugin_api import plugin_ai_complete
+
+        @router.get("/recommend")
+        async def recommend(subscription_id: str, region: str):
+            result = await plugin_ai_complete(
+                "Analyse the VMs in this subscription and recommend capacity reservations.",
+                system_prompt="You are a capacity planning expert.",
+                subscription_id=subscription_id,
+                region=region,
+            )
+            return {"recommendation": result["content"]}
+    """
+    from az_scout.services.ai_chat._complete import ai_complete
+
+    r = await ai_complete(
+        prompt,
+        system_prompt=system_prompt,
+        tenant_id=tenant_id,
+        region=region,
+        subscription_id=subscription_id,
+        tools=tools,
+        cache_ttl=cache_ttl,
+    )
+    return {"content": r.content, "tool_calls": r.tool_calls}
+
+
+# ---------------------------------------------------------------------------
 # Plugin error boundary — typed exceptions for automatic error responses
 # ---------------------------------------------------------------------------
 
