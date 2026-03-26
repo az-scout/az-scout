@@ -7,19 +7,14 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
 ## Unreleased
 
+## [2026.3.7] - 2026-03-26
+
 ### Fixed
 
 - **Plugin uninstall in ACA** – `uv pip uninstall` now appends `--system` when running outside a virtual environment (e.g. in Azure Container Apps), fixing `No virtual environment found` errors (#115).
 - **Plugin compatibility** – Plugin protocol check now uses a lenient attribute check instead of `isinstance(obj, AzScoutPlugin)`. Plugins missing newer optional methods (e.g. `get_navbar_actions`) load correctly again (#116).
 - **Broken versioning** – Removed non-CalVer tag (`obo-single-tenant-v1`) that caused `hatch-vcs` to produce `2.dev4` instead of `2026.3.x.devN` (#117).
 - **Chat tables overflow** – Tables in chat bubbles now scroll horizontally instead of overflowing outside the panel.
-
-### Added
-
-- **Chat pin/open persistence** – Chat panel pinned state and open/closed state are saved to localStorage and restored on reload.
-- **Chat h1 rendering** – Markdown `# heading` (h1) is now rendered in chat bubbles (previously only `##` and `###` were handled).
-- **Clickable choices for all chat modes** – The `[[option]]` formatting instruction is now appended to all chat modes (including plugin-contributed modes like ODCR Advisor), so LLM responses consistently use clickable chips for selectable options.
-- **Chat history for plugin modes** – `_restoreChatHistory` now restores all saved modes (including plugin-contributed ones), not just `discussion` and `planner`.
 
 ### Added
 
@@ -39,13 +34,14 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 - **`is_ai_enabled()` / `aiEnabled`** – Plugin helpers (Python and JS) to check if AI capabilities are configured.
 - **`renderMarkdown()` global** – Shared `marked.js` v15 renderer available to all plugins for rendering AI output as HTML.
 - **Chat markdown via marked.js** – Chat `_renderMarkdown()` now uses marked.js with custom extensions for `[[…]]` clickable chips, compact chip lists, and styled tables/headings. Replaces the old regex-based parser.
+- **Chat pin/open persistence** – Chat panel pinned state and open/closed state are saved to localStorage and restored on reload.
+- **Chat h1 rendering** – Markdown `# heading` (h1) is now rendered in chat bubbles.
+- **Clickable choices for all chat modes** – The `[[option]]` formatting instruction is now appended to all chat modes (including plugin-contributed modes), so LLM responses consistently use clickable chips for selectable options.
+- **Chat history for plugin modes** – `_restoreChatHistory` now restores all saved modes (including plugin-contributed ones), not just `discussion` and `planner`.
 
 ### Changed
 
 - **Plugin error handling** – `PluginError` exceptions caused by `OboTokenError` return 401 (not 502) and suppress stacktraces.
-
-### Changed
-
 - **Remote plugin catalog** – Plugin Manager now fetches from `plugin-catalog.az-scout.com` instead of the embedded JSON file (#107).
 - **Persistent plugin packages** – plugin packages now install to `~/.local/share/az-scout/packages/` (persistent) instead of `/tmp/` (lost on reboot). Containers use `AZ_SCOUT_PACKAGES_DIR=/tmp/az-scout-packages` to preserve SMB compatibility.
 - **Dynamic docs catalog** – plugin catalog page now renders dynamically from the remote catalog with live PyPI version badges, author avatars, and tags.
@@ -53,11 +49,6 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 ### Removed
 
 - **Embedded `recommended_plugins.json`** – replaced by the remote catalog at [az-scout/plugin-catalog](https://github.com/az-scout/plugin-catalog).
-- **Remote plugin catalog** – the Plugin Manager now fetches the plugin catalog from `plugin-catalog.az-scout.com` instead of the embedded `recommended_plugins.json`. Catalog is cached for 1 hour. Returns empty list if unreachable (#107).
-
-### Removed
-
-- **Embedded `recommended_plugins.json`** – replaced by the remote catalog hosted at [az-scout/plugin-catalog](https://github.com/az-scout/plugin-catalog).
 
 ## [2026.3.6] - 2026-03-12
 
