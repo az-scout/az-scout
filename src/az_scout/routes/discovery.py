@@ -3,11 +3,11 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from az_scout import azure_api
-from az_scout.auth import get_user_token
+from az_scout.auth import get_user_token, require_auth
 from az_scout.models.responses import (
     ErrorResponse,
     RegionInfo,
@@ -15,7 +15,7 @@ from az_scout.models.responses import (
     TenantListResponse,
 )
 
-router = APIRouter(tags=["Discovery"])
+router = APIRouter(tags=["Discovery"], dependencies=[Depends(require_auth)])
 logger = logging.getLogger(__name__)
 
 
