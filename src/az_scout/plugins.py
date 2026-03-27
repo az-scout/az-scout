@@ -20,7 +20,7 @@ import logging
 import sys
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from az_scout.internal_plugins import discover_internal_plugins
@@ -161,7 +161,11 @@ def _register_one(app: FastAPI, mcp_server: Any, plugin: AzScoutPlugin) -> None:
     try:
         router = plugin.get_router()
         if router is not None:
+            from az_scout.auth import require_auth
+
             prefix = "/api" if internal else f"/plugins/{name}"
+            # Inject auth guard on all plugin API routes
+            router.dependencies = [*router.dependencies, Depends(require_auth)]
             if internal:
                 app.include_router(router, prefix=prefix)
             else:

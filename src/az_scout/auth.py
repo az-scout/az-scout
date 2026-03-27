@@ -75,4 +75,20 @@ def get_user_token(request: Request) -> str | None:
     # 2. Session cookie (web browser via server-side login)
     from az_scout.routes.auth import get_session_token
 
-    return get_session_token(request)
+    token: str | None = get_session_token(request)
+    return token
+
+
+async def require_auth(request: Request) -> None:
+    """FastAPI dependency that enforces authentication when OBO is enabled.
+
+    Raises ``OboTokenError`` (→ 401) for unauthenticated requests to
+    protected endpoints.  In non-OBO mode this is a no-op.
+    """
+    from az_scout.azure_api._obo import OboTokenError, is_obo_enabled
+
+    if not is_obo_enabled():
+        return
+    token = get_user_token(request)
+    if not token:
+        raise OboTokenError("Authentication required", error_code="login_required")

@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -202,7 +202,7 @@ app.add_middleware(_CSPMiddleware)
 # contextvars propagation to route handlers.
 # ---------------------------------------------------------------------------
 
-from az_scout.auth import clear_request_auth, set_request_auth  # noqa: E402
+from az_scout.auth import clear_request_auth, require_auth, set_request_auth  # noqa: E402
 
 
 class _AuthContextMiddleware:
@@ -389,6 +389,7 @@ class ChatRequest(BaseModel):
     tags=["AI Chat"],
     summary="AI chat with Azure Scout tools",
     responses={503: {"description": "AI chat not configured"}},
+    dependencies=[Depends(require_auth)],
 )
 async def chat(body: ChatRequest) -> StreamingResponse:
     """Stream AI chat completions with tool-calling support.
@@ -440,6 +441,7 @@ class CompleteRequest(BaseModel):
     tags=["AI Chat"],
     summary="Non-streaming AI completion with tool calling",
     responses={503: {"description": "AI chat not configured"}},
+    dependencies=[Depends(require_auth)],
 )
 async def ai_complete_endpoint(body: CompleteRequest) -> JSONResponse:
     """Run a single-shot AI completion with optional tool calling.
