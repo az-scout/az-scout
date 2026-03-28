@@ -7,6 +7,8 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
 ## Unreleased
 
+## [2026.3.8] - 2026-03-28
+
 ### Added
 
 - **Docs catalog page** – The plugin catalog documentation page now embeds the shared `catalog.html` fragment via an iframe wrapping a standalone Bootstrap page generated at build time by the `on_post_build` hook. System theme detection, toggle button, and the full card-based catalog UI are available inline in the docs.
