@@ -1,6 +1,98 @@
 <!-- Plugin Manager panel fragment -->
 <div class="d-flex flex-column gap-3">
-    <!-- Add / Validate -->
+    <!-- Restart required banner (hidden by default) -->
+    <div id="pm-restart-banner" class="alert alert-warning d-none mb-0" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>Restart required.</strong>
+        This plugin installed native compiled extensions.
+        An instance restart is required for them to work correctly.
+    </div>
+    <!-- Global operation status bar (hidden by default) -->
+    <div id="pm-global-status" class="alert alert-info d-none mb-0 py-2 d-flex align-items-center" role="status">
+        <div class="spinner-border spinner-border-sm me-2" role="status">
+            <span class="visually-hidden">Loading…</span>
+        </div>
+        <span id="pm-global-status-text">Working…</span>
+    </div>
+
+    <!-- Plugin catalog -->
+    <div>
+        <div class="card">
+            <div class="card-header">
+                <a href="https://plugin-catalog.az-scout.com" target="_blank" rel="noopener"
+                   class="text-decoration-none text-primary fw-semibold">
+                    Explore plugin catalog
+                    <i class="bi bi-box-arrow-up-right ms-1" style="font-size:0.8em;"></i>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="p-2">
+                    <input type="text" class="form-control form-control-sm" id="pm-catalog-filter"
+                           placeholder="Filter by name…" autocomplete="off">
+                </div>
+                <div id="pm-recommended-empty" class="text-center text-body-secondary py-3">
+                    No plugins in catalog
+                </div>
+                <div id="pm-recommended-table-wrap" class="d-none">
+                    <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0" style="font-size:0.82rem;">
+                        <thead>
+                            <tr>
+                                <th>Plugin</th>
+                                <th>Description</th>
+                                <th>Source</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="pm-recommended-tbody"></tbody>
+                    </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Installed plugins (all: built-in + UI-installed) -->
+    <div>
+        <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span><i class="bi bi-box-seam me-1"></i>Installed plugins</span>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-outline-info btn-sm py-0 px-2" id="pm-check-updates-btn"
+                            onclick="pmCheckUpdates()" title="Check for updates">
+                        <i class="bi bi-arrow-repeat me-1"></i>Check updates
+                    </button>
+                    <button class="btn btn-primary btn-sm py-0 px-2 d-none" id="pm-update-all-btn"
+                            onclick="pmUpdateAll()" title="Update all plugins">
+                        <i class="bi bi-cloud-download me-1"></i>Update all
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="pm-installed-empty" class="text-center text-body-secondary py-3">
+                    No plugins installed
+                </div>
+                <div id="pm-installed-table-wrap" class="d-none">
+                    <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0" style="font-size:0.82rem;">
+                        <thead>
+                            <tr>
+                                <th>Plugin</th>
+                                <th>Version</th>
+                                <th>Source</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="pm-installed-tbody"></tbody>
+                    </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual plugin install (collapsible) -->
     <div>
         <div class="card border-info">
             <div class="card-header p-0">
@@ -53,112 +145,6 @@
                     <span class="ms-2 text-body-secondary" id="pm-spinner-text">Validating…</span>
                 </div>
             </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Installed (UI) -->
-    <div>
-        <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between">
-                <span><i class="bi bi-box-seam me-1"></i>Installed (UI)</span>
-                <div class="d-flex gap-1">
-                    <button class="btn btn-outline-info btn-sm py-0 px-2" id="pm-check-updates-btn"
-                            onclick="pmCheckUpdates()" title="Check for updates">
-                        <i class="bi bi-arrow-repeat me-1"></i>Check updates
-                    </button>
-                    <button class="btn btn-primary btn-sm py-0 px-2 d-none" id="pm-update-all-btn"
-                            onclick="pmUpdateAll()" title="Update all plugins">
-                        <i class="bi bi-cloud-download me-1"></i>Update all
-                    </button>
-                </div>
-            </div>
-            <div class="card-body p-0">
-                <div id="pm-installed-empty" class="text-center text-body-secondary py-3">
-                    No plugins installed via UI
-                </div>
-                <div id="pm-installed-table-wrap" class="d-none">
-                    <div class="table-responsive">
-                    <table class="table table-sm table-hover mb-0" style="font-size:0.82rem;">
-                        <thead>
-                            <tr>
-                                <th>Distribution</th>
-                                <th>Source</th>
-                                <th>Installed</th>
-                                <th>Latest</th>
-                                <th>Status</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="pm-installed-tbody"></tbody>
-                    </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recommended plugins -->
-    <div>
-        <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between">
-                <span><i class="bi bi-star me-1"></i>Plugin catalog (recommendations)</span>
-                <a href="https://plugin-catalog.az-scout.com" target="_blank" rel="noopener"
-                   class="btn btn-outline-primary btn-sm py-0 px-2">
-                    <i class="bi bi-box-arrow-up-right me-1"></i>Explore catalog
-                </a>
-            </div>
-            <div class="card-body p-0">
-                <div id="pm-recommended-empty" class="text-center text-body-secondary py-3">
-                    No recommended plugins
-                </div>
-                <div id="pm-recommended-table-wrap" class="d-none">
-                    <div class="table-responsive">
-                    <table class="table table-sm table-hover mb-0" style="font-size:0.82rem;">
-                        <thead>
-                            <tr>
-                                <th>Plugin</th>
-                                <th>Description</th>
-                                <th>Source</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="pm-recommended-tbody"></tbody>
-                    </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Loaded (runtime) -->
-    <div>
-        <div class="card">
-            <div class="card-header p-0">
-                <button class="btn btn-link w-100 text-start text-body text-decoration-none py-2 px-3" id="pm-loaded-toggle"
-                    type="button" data-pm-collapse-target="#pm-loaded-collapse" aria-expanded="false"
-                    aria-controls="pm-loaded-collapse">
-                    <i class="bi bi-lightning me-1"></i>Loaded (runtime)
-                    <i class="bi bi-chevron-down float-end"></i>
-                </button>
-            </div>
-            <div id="pm-loaded-collapse" class="collapse">
-                <div class="card-body p-0">
-                    <div id="pm-loaded-empty" class="text-center text-body-secondary py-3">
-                        No plugins loaded in current process
-                    </div>
-                    <div id="pm-loaded-table-wrap" class="d-none">
-                        <table class="table table-sm table-hover mb-0" style="font-size:0.82rem;">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Version</th>
-                                </tr>
-                            </thead>
-                            <tbody id="pm-loaded-tbody"></tbody>
-                        </table>
-                    </div>
-                </div>
             </div>
         </div>
     </div>

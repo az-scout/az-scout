@@ -12,10 +12,18 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 - **File instructions** – Split `copilot-instructions.md` (390→93 lines) into 5 domain-specific file instructions that load automatically when editing relevant files: `azure-api`, `obo-auth`, `frontend`, `plugin-dev`, `plugin-scaffold`.
 - **`create-plugin` skill** – Interactive skill (`/create-plugin`) that guides plugin scaffold generation, conventions, and quality checks.
 - **Auth guard on API routes** – `require_auth` FastAPI dependency enforces OBO authentication on discovery, chat, AI completion, and all plugin API routes. Unauthenticated requests return 401 when OBO is enabled; in non-OBO mode the guard is a no-op.
+- **Native extension detection** – Plugin install/update routes detect newly installed compiled extensions (`.so`, `.pyd`, `.dylib`) and return `restart_required: true` in the API response, prompting users to restart the instance.
+- **Plugin Manager UI redesign** – Merged "Installed (UI)" and "Loaded (runtime)" into a single "Installed plugins" table showing all plugins with source, status, and management actions. Catalog section moved to the top with a filter input. Manual install moved to a collapsible section at the bottom.
+- **Restart banner** – Plugin Manager shows a warning banner when a plugin with native extensions is installed, indicating a container restart is required.
+- **Global status bar** – Plugin Manager shows an inline status bar with spinner during install/uninstall/update operations.
 
 ### Changed
 
 - **Plugin catalog docs** – Catalog page now features a prominent button linking to the full [plugin-catalog.az-scout.com](https://plugin-catalog.az-scout.com) experience while keeping the simplified table listing inline.
+
+### Removed
+
+- **Duplicate prompts** – Removed `add-plugin-to-catalog.prompt.md` and `review-plugin.prompt.md` from the core repo. These now live canonically in the [plugin-catalog](https://github.com/az-scout/plugin-catalog) repo.
 
 ## [2026.3.7] - 2026-03-26
 

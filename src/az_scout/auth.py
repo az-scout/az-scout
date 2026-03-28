@@ -75,8 +75,7 @@ def get_user_token(request: Request) -> str | None:
     # 2. Session cookie (web browser via server-side login)
     from az_scout.routes.auth import get_session_token
 
-    token: str | None = get_session_token(request)
-    return token
+    return get_session_token(request)
 
 
 async def require_auth(request: Request) -> None:

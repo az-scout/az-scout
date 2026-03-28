@@ -1863,3 +1863,173 @@ class TestRecommendedRoute:
         assert len(data["plugins"]) == 1
         assert data["plugins"][0]["name"] == "az-scout-plugin-foo"
         assert data["plugins"][0]["installed"] is False
+
+
+# ---------------------------------------------------------------------------
+# Native extension detection
+# ---------------------------------------------------------------------------
+
+
+class TestNativeExtensionDetection:
+    """Tests for snapshot_native_files / has_new_native_extensions."""
+
+    def test_snapshot_empty_dir(self, tmp_path: Path) -> None:
+        from az_scout.plugin_manager._installer import snapshot_native_files
+
+        result = snapshot_native_files(tmp_path)
+        assert result == set()
+
+    def test_snapshot_nonexistent_dir(self, tmp_path: Path) -> None:
+        from az_scout.plugin_manager._installer import snapshot_native_files
+
+        result = snapshot_native_files(tmp_path / "does-not-exist")
+        assert result == set()
+
+    def test_snapshot_finds_so_files(self, tmp_path: Path) -> None:
+        from az_scout.plugin_manager._installer import snapshot_native_files
+
+        (tmp_path / "numpy").mkdir()
+        (tmp_path / "numpy" / "_core.so").touch()
+        (tmp_path / "pure.py").touch()
+
+        result = snapshot_native_files(tmp_path)
+        assert len(result) == 1
+        assert any(p.name == "_core.so" for p in result)
+
+    def test_snapshot_finds_pyd_files(self, tmp_path: Path) -> None:
+        from az_scout.plugin_manager._installer import snapshot_native_files
+
+        (tmp_path / "pkg").mkdir()
+        (tmp_path / "pkg" / "ext.pyd").touch()
+
+        result = snapshot_native_files(tmp_path)
+        assert len(result) == 1
+
+    def test_snapshot_finds_dylib_files(self, tmp_path: Path) -> None:
+        from az_scout.plugin_manager._installer import snapshot_native_files
+
+        (tmp_path / "lib").mkdir()
+        (tmp_path / "lib" / "libfoo.dylib").touch()
+
+        result = snapshot_native_files(tmp_path)
+        assert len(result) == 1
+
+    def test_has_new_native_extensions_true(self, tmp_path: Path) -> None:
+        from az_scout.plugin_manager._installer import (
+            has_new_native_extensions,
+            snapshot_native_files,
+        )
+
+        before = snapshot_native_files(tmp_path)
+        # Simulate pip installing a native extension
+        (tmp_path / "numpy").mkdir()
+        (tmp_path / "numpy" / "_multiarray.so").touch()
+
+        assert has_new_native_extensions(before, tmp_path) is True
+
+    def test_has_new_native_extensions_false(self, tmp_path: Path) -> None:
+        from az_scout.plugin_manager._installer import (
+            has_new_native_extensions,
+            snapshot_native_files,
+        )
+
+        (tmp_path / "pkg").mkdir()
+        (tmp_path / "pkg" / "ext.so").touch()
+        before = snapshot_native_files(tmp_path)
+        # No new files added
+        assert has_new_native_extensions(before, tmp_path) is False
+
+    def test_has_new_native_extensions_pure_python(self, tmp_path: Path) -> None:
+        from az_scout.plugin_manager._installer import (
+            has_new_native_extensions,
+            snapshot_native_files,
+        )
+
+        before = snapshot_native_files(tmp_path)
+        # Only pure-Python files added
+        (tmp_path / "mypkg").mkdir()
+        (tmp_path / "mypkg" / "__init__.py").touch()
+
+        assert has_new_native_extensions(before, tmp_path) is False
+
+
+class TestInstallRestartRequired:
+    """Tests that the install/update routes return restart_required."""
+
+    def test_install_returns_restart_required_true(self, client) -> None:  # type: ignore[no-untyped-def]
+        with (
+            patch(
+                "az_scout.routes.plugin_manager.install_plugin",
+                return_value=(True, [], []),
+            ),
+            patch("az_scout.routes.reload_plugins"),
+            patch("az_scout.routes.snapshot_native_files", return_value=set()),
+            patch("az_scout.routes.has_new_native_extensions", return_value=True),
+        ):
+            resp = client.post(
+                "/api/plugins/install",
+                json={"repo_url": "https://github.com/owner/repo", "ref": "v1.0.0"},
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+        assert data["restart_required"] is True
+        assert any("restart" in w.lower() for w in data["warnings"])
+
+    def test_install_returns_restart_required_false(self, client) -> None:  # type: ignore[no-untyped-def]
+        with (
+            patch(
+                "az_scout.routes.plugin_manager.install_plugin",
+                return_value=(True, [], []),
+            ),
+            patch("az_scout.routes.reload_plugins"),
+            patch("az_scout.routes.snapshot_native_files", return_value=set()),
+            patch("az_scout.routes.has_new_native_extensions", return_value=False),
+        ):
+            resp = client.post(
+                "/api/plugins/install",
+                json={"repo_url": "https://github.com/owner/repo", "ref": "v1.0.0"},
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+        assert data["restart_required"] is False
+
+    def test_update_returns_restart_required(self, client) -> None:  # type: ignore[no-untyped-def]
+        with (
+            patch(
+                "az_scout.routes.plugin_manager.update_plugin",
+                return_value=(True, []),
+            ),
+            patch("az_scout.routes.reload_plugins"),
+            patch("az_scout.routes.snapshot_native_files", return_value=set()),
+            patch("az_scout.routes.has_new_native_extensions", return_value=True),
+        ):
+            resp = client.post(
+                "/api/plugins/update",
+                json={"distribution_name": "az-scout-example"},
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+        assert data["restart_required"] is True
+
+    def test_update_all_returns_restart_required(self, client) -> None:  # type: ignore[no-untyped-def]
+        with (
+            patch(
+                "az_scout.routes.plugin_manager.update_all_plugins",
+                return_value=(2, 0, []),
+            ),
+            patch("az_scout.routes.reload_plugins"),
+            patch("az_scout.routes.snapshot_native_files", return_value=set()),
+            patch("az_scout.routes.has_new_native_extensions", return_value=True),
+        ):
+            resp = client.post("/api/plugins/update-all", json={})
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+        assert data["restart_required"] is True

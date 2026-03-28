@@ -55,7 +55,7 @@
             {% endfor %}
             {% endfor %}
             <button type="button" class="btn btn-sm btn-outline-secondary admin-only" id="plugin-manager-btn"
-                    title="Plugin Manager" data-bs-toggle="offcanvas" data-bs-target="#pluginOffcanvas">
+                    title="Plugin Manager" data-bs-toggle="modal" data-bs-target="#pluginModal">
                 <i class="bi bi-puzzle"></i>
             </button>
             <button type="button" class="btn btn-sm btn-outline-secondary" id="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
@@ -169,14 +169,18 @@
     <span>Independent Azure analysis tool — not affiliated with Microsoft.</span>
 </footer>
 
-<!-- ===== Plugin Manager Offcanvas ===== -->
-<div class="offcanvas offcanvas-end admin-only" tabindex="-1" id="pluginOffcanvas" aria-labelledby="pluginOffcanvasLabel" style="width:700px;">
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="pluginOffcanvasLabel"><i class="bi bi-puzzle me-2"></i>Plugin Manager</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-    </div>
-    <div class="offcanvas-body" id="plugin-manager-body">
-        <!-- Populated by plugins.js -->
+<!-- ===== Plugin Manager Modal ===== -->
+<div class="modal fade" tabindex="-1" id="pluginModal" aria-labelledby="pluginModalLabel">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pluginModalLabel"><i class="bi bi-puzzle me-2"></i>Plugin Manager</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="plugin-manager-body">
+                <!-- Populated by plugins.js -->
+            </div>
+        </div>
     </div>
 </div>
 
