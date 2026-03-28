@@ -7,10 +7,14 @@ import os
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 import az_scout.plugin_manager._storage as _storage
 
 logger = logging.getLogger(__name__)
+
+# File suffixes that indicate compiled native extensions.
+_NATIVE_SUFFIXES = (".so", ".pyd", ".dylib")
 
 
 def _find_uv() -> str | None:
@@ -60,3 +64,30 @@ def run_pip(args: list[str]) -> subprocess.CompletedProcess[str]:
         env=env,
         check=False,
     )
+
+
+def snapshot_native_files(packages_dir: Path | None = None) -> set[Path]:
+    """Return the set of compiled extension files currently in *packages_dir*."""
+    pkg = packages_dir or _storage._PACKAGES_DIR
+    if not pkg.exists():
+        return set()
+    result: set[Path] = set()
+    for suffix in _NATIVE_SUFFIXES:
+        result.update(pkg.glob(f"**/*{suffix}"))
+    return result
+
+
+def has_new_native_extensions(
+    before: set[Path],
+    packages_dir: Path | None = None,
+) -> bool:
+    """Return ``True`` if new compiled extensions appeared since *before* snapshot."""
+    after = snapshot_native_files(packages_dir)
+    new = after - before
+    if new:
+        logger.info(
+            "Detected %d new native extension file(s): %s",
+            len(new),
+            ", ".join(sorted(p.name for p in new)),
+        )
+    return bool(new)

@@ -23,7 +23,9 @@ __all__ = [
     "resolve_ref_to_sha",
     "validate_plugin_repo",
     # Installer
+    "has_new_native_extensions",
     "run_pip",
+    "snapshot_native_files",
     # Models
     "GitHubRepo",
     "InstalledPluginRecord",
@@ -73,7 +75,9 @@ from az_scout.plugin_manager._github import (  # noqa: F401
 
 # Installer (pip/uv wrapper)
 from az_scout.plugin_manager._installer import (  # noqa: F401
+    has_new_native_extensions,
     run_pip,
+    snapshot_native_files,
 )
 from az_scout.plugin_manager._models import (  # noqa: F401
     GitHubRepo,

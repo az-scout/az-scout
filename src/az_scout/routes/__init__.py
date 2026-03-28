@@ -8,7 +8,13 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from az_scout import plugin_manager
-from az_scout.plugins import get_loaded_plugins, reload_plugins
+from az_scout.plugin_manager._installer import has_new_native_extensions, snapshot_native_files
+from az_scout.plugins import _plugin_dist_names, get_loaded_plugins, reload_plugins
+
+_RESTART_WARNING = (
+    "This plugin installed native compiled extensions (e.g. numpy). "
+    "A container restart is required for them to work correctly."
+)
 
 router = APIRouter(prefix="/api/plugins", tags=["Plugin Manager"])
 
@@ -94,6 +100,7 @@ async def list_plugins() -> JSONResponse:
                     "name": p.name,
                     "version": p.version,
                     "internal": bool(getattr(p, "internal", False)),
+                    "distribution_name": _plugin_dist_names.get(p.name, ""),
                 }
                 for p in loaded
             ],
@@ -121,6 +128,7 @@ async def install_plugin(body: InstallRequest, request: Request) -> JSONResponse
     """Install a plugin from a GitHub repository or PyPI."""
     _require_admin(request)
     actor, client_ip, user_agent = _actor(request)
+    before = snapshot_native_files()
     if plugin_manager.is_pypi_source(body.repo_url):
         ok, warnings, errors = await asyncio.to_thread(
             plugin_manager.install_pypi_plugin,
@@ -139,13 +147,17 @@ async def install_plugin(body: InstallRequest, request: Request) -> JSONResponse
             client_ip,
             user_agent,
         )
+    restart_required = ok and has_new_native_extensions(before)
     if ok:
         reload_plugins(request.app, request.app.state.mcp_server)
+    if restart_required:
+        warnings.append(_RESTART_WARNING)
     return JSONResponse(
         {
             "ok": ok,
             "warnings": warnings,
             "errors": errors,
+            "restart_required": restart_required,
         },
     )
 
@@ -185,6 +197,7 @@ async def update_plugin(body: UpdateRequest, request: Request) -> JSONResponse:
     """Update a single plugin to the latest GitHub release/tag."""
     _require_admin(request)
     actor, client_ip, user_agent = _actor(request)
+    before = snapshot_native_files()
     ok, errors = await asyncio.to_thread(
         plugin_manager.update_plugin,
         body.distribution_name,
@@ -192,12 +205,14 @@ async def update_plugin(body: UpdateRequest, request: Request) -> JSONResponse:
         client_ip,
         user_agent,
     )
+    restart_required = ok and has_new_native_extensions(before)
     if ok:
         reload_plugins(request.app, request.app.state.mcp_server)
     return JSONResponse(
         {
             "ok": ok,
             "errors": errors,
+            "restart_required": restart_required,
         },
     )
 
@@ -214,12 +229,14 @@ async def update_all_plugins(request: Request) -> JSONResponse:
     """Update all installed plugins that have available updates."""
     _require_admin(request)
     actor, client_ip, user_agent = _actor(request)
+    before = snapshot_native_files()
     updated, failed, details = await asyncio.to_thread(
         plugin_manager.update_all_plugins,
         actor,
         client_ip,
         user_agent,
     )
+    restart_required = updated > 0 and has_new_native_extensions(before)
     if updated > 0:
         reload_plugins(request.app, request.app.state.mcp_server)
     return JSONResponse(
@@ -228,5 +245,6 @@ async def update_all_plugins(request: Request) -> JSONResponse:
             "updated": updated,
             "failed": failed,
             "details": details,
+            "restart_required": restart_required,
         },
     )

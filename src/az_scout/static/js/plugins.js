@@ -1,4 +1,4 @@
-/* Plugin Manager offcanvas logic */
+/* Plugin Manager modal logic */
 /* global apiFetch, apiPost, bootstrap */
 
 (() => {
@@ -16,26 +16,26 @@
         return source && !source.startsWith("http");
     }
 
-    const offcanvasEl = document.getElementById("pluginOffcanvas");
-    if (!offcanvasEl) return;
+    const modalEl = document.getElementById("pluginModal");
+    if (!modalEl) return;
 
-    // Lazy-init: fetch HTML fragment + data only when the offcanvas is first shown
-    offcanvasEl.addEventListener("show.bs.offcanvas", initOnce);
+    // Lazy-init: fetch HTML fragment + data only when the modal is first shown
+    modalEl.addEventListener("show.bs.modal", initOnce);
 
-    // Update URL hash when offcanvas opens/closes
-    offcanvasEl.addEventListener("shown.bs.offcanvas", () => {
+    // Update URL hash when modal opens/closes
+    modalEl.addEventListener("shown.bs.modal", () => {
         window.history.replaceState(null, "", "#plugin");
     });
-    offcanvasEl.addEventListener("hidden.bs.offcanvas", () => {
+    modalEl.addEventListener("hidden.bs.modal", () => {
         if (window.location.hash === "#plugin") {
             window.history.replaceState(null, "", window.location.pathname);
         }
     });
 
-    // Open offcanvas from #plugin hash on page load
+    // Open modal from #plugin hash on page load
     if (window.location.hash === "#plugin") {
-        const bsOffcanvas = new bootstrap.Offcanvas(offcanvasEl);
-        bsOffcanvas.show();
+        const bsModal = new bootstrap.Modal(modalEl);
+        bsModal.show();
     }
 
     function initOnce() {
@@ -50,8 +50,10 @@
             .then(html => {
                 container.innerHTML = html;
                 initPanelCollapses();
+                initCatalogFilter();
                 loadPlugins();
                 loadRecommended();
+                checkUpdatesQuiet();
             });
     }
 
@@ -86,18 +88,62 @@
 
     function loadPlugins() {
         apiFetch("/api/plugins").then(data => {
-            renderInstalled(data.installed || []);
-            renderLoaded(data.loaded || []);
+            renderInstalledMerged(data.installed || [], data.loaded || []);
         }).catch(() => {});
     }
 
-    function renderInstalled(list) {
+    /**
+     * Build a merged list of all plugins (built-in + external) with UI
+     * management controls only for UI-installed ones.
+     */
+    function renderInstalledMerged(installed, loaded) {
         const empty = document.getElementById("pm-installed-empty");
         const wrap = document.getElementById("pm-installed-table-wrap");
         const tbody = document.getElementById("pm-installed-tbody");
         if (!empty || !wrap || !tbody) return;
 
-        if (list.length === 0) {
+        // Build a lookup: distribution_name → installed record
+        const installedByDist = {};
+        for (const r of installed) {
+            installedByDist[r.distribution_name] = r;
+        }
+
+        // Build merged rows: start from loaded plugins (authoritative runtime list),
+        // then append any installed records that aren't loaded (failed to load, etc.)
+        const rows = [];
+        const seenDists = new Set();
+
+        for (const p of loaded) {
+            const distName = p.distribution_name || "";
+            const record = distName ? installedByDist[distName] : null;
+            if (distName) seenDists.add(distName);
+            rows.push({
+                name: p.name,
+                version: p.version,
+                internal: p.internal,
+                uiManaged: !!record,
+                record: record,
+                distName: distName,
+                loaded: true,
+            });
+        }
+
+        // Append installed-but-not-loaded plugins
+        for (const r of installed) {
+            if (!seenDists.has(r.distribution_name)) {
+                rows.push({
+                    name: r.distribution_name,
+                    version: r.ref || "",
+                    internal: false,
+                    uiManaged: true,
+                    record: r,
+                    distName: r.distribution_name,
+                    loaded: false,
+                });
+            }
+        }
+
+        if (rows.length === 0) {
             empty.classList.remove("d-none");
             wrap.classList.add("d-none");
             return;
@@ -106,101 +152,82 @@
         wrap.classList.remove("d-none");
         tbody.innerHTML = "";
         let anyUpdate = false;
-        for (const r of list) {
+
+        for (const row of rows) {
             const tr = document.createElement("tr");
-            const pypi = r.source === "pypi";
-            const installed = r.installed_at ? new Date(r.installed_at).toLocaleString() : "";
+            const r = row.record;
 
-            // Source column: PyPI link or GitHub repo link
-            let sourceLink;
-            if (pypi) {
-                const pypiUrl = `https://pypi.org/project/${encodeURIComponent(r.distribution_name)}/`;
-                sourceLink = `<a href="${escHtml(pypiUrl)}" target="_blank" rel="noopener"><i class="bi bi-box-seam me-1"></i>PyPI</a>`;
-            } else {
-                sourceLink = r.repo_url
-                    ? `<a href="${escHtml(r.repo_url)}" target="_blank" rel="noopener"><i class="bi bi-github me-1"></i>GitHub</a>`
-                    : "";
+            // Name column
+            let nameHtml = "<code>" + escHtml(row.name) + "</code>";
+            if (row.internal) {
+                nameHtml += ' <span class="badge text-bg-secondary">built-in</span>';
+            } else if (!row.uiManaged && row.loaded) {
+                nameHtml += ' <span class="badge text-bg-light border" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Installed outside the plugin manager (e.g. pip, Dockerfile). Not manageable from this UI.">external</span>';
+            }
+            if (!row.loaded) {
+                nameHtml += ' <span class="badge text-bg-warning">not loaded</span>';
             }
 
-            // Installed version column
-            let installedVer;
-            if (pypi) {
-                installedVer = escHtml(r.ref);
-            } else {
-                const shaShort = (r.resolved_sha || "").substring(0, 8);
-                installedVer = `${escHtml(r.ref)} <code title="${escHtml(r.resolved_sha)}">${escHtml(shaShort)}</code>`;
+            // Version column
+            const versionHtml = escHtml(row.version);
+
+            // Source column
+            let sourceHtml = "";
+            if (row.internal) {
+                sourceHtml = '<span class="text-body-secondary">built-in</span>';
+            } else if (r) {
+                const pypi = r.source === "pypi";
+                if (pypi) {
+                    const pypiUrl = "https://pypi.org/project/" + encodeURIComponent(r.distribution_name) + "/";
+                    sourceHtml = '<a href="' + escHtml(pypiUrl) + '" target="_blank" rel="noopener"><i class="bi bi-box-seam me-1"></i>PyPI</a>';
+                } else if (r.repo_url) {
+                    sourceHtml = '<a href="' + escHtml(r.repo_url) + '" target="_blank" rel="noopener"><i class="bi bi-github me-1"></i>GitHub</a>';
+                }
+            } else if (!row.uiManaged && row.loaded) {
+                sourceHtml = '<span class="text-body-secondary">pip / system</span>';
             }
 
-            // Latest version column
-            const info = updateInfo[r.distribution_name];
-            let latestVer = '<span class="text-body-secondary">—</span>';
-            let statusBadge = '<span class="badge bg-secondary">Unknown</span>';
-            let updateBtn = "";
+            // Status + actions — only for UI-managed plugins
+            let statusHtml = "";
+            let actionsHtml = "";
 
-            if (info) {
-                if (info.error) {
-                    latestVer = '<span class="text-danger" title="' + escHtml(info.error) + '">Error</span>';
-                    statusBadge = '<span class="badge bg-warning text-dark">Unknown</span>';
-                } else if (info.latest_ref) {
-                    if (pypi) {
-                        latestVer = escHtml(info.latest_ref);
-                    } else {
-                        const latestShaShort = (info.latest_sha || "").substring(0, 8);
-                        latestVer = `${escHtml(info.latest_ref)} <code title="${escHtml(info.latest_sha)}">${escHtml(latestShaShort)}</code>`;
-                    }
-                    if (info.update_available) {
+            if (row.uiManaged && r) {
+                const info = updateInfo[r.distribution_name];
+                let statusBadge = '<span class="badge bg-secondary">Unknown</span>';
+                let updateBtn = "";
+
+                if (info) {
+                    if (info.error) {
+                        statusBadge = '<span class="badge bg-warning text-dark">Unknown</span>';
+                    } else if (info.update_available) {
                         statusBadge = '<span class="badge bg-info text-dark">Update available</span>';
-                        updateBtn = ` <button class="btn btn-outline-info btn-sm py-0 px-1"
-                                              title="Update"
-                                              onclick="pmUpdate('${escAttr(r.distribution_name)}')">
-                                          <i class="bi bi-cloud-download"></i>
-                                      </button>`;
+                        updateBtn = ' <button class="btn btn-outline-info btn-sm py-0 px-1" title="Update" onclick="pmUpdate(\'' + escAttr(r.distribution_name) + '\')"><i class="bi bi-cloud-download"></i></button>';
                         anyUpdate = true;
-                    } else {
+                    } else if (info.latest_ref) {
                         statusBadge = '<span class="badge bg-success">Up to date</span>';
                     }
+                } else if (r.update_available === true) {
+                    statusBadge = '<span class="badge bg-info text-dark">Update available</span>';
+                    updateBtn = ' <button class="btn btn-outline-info btn-sm py-0 px-1" title="Update" onclick="pmUpdate(\'' + escAttr(r.distribution_name) + '\')"><i class="bi bi-cloud-download"></i></button>';
+                    anyUpdate = true;
+                } else if (r.update_available === false) {
+                    statusBadge = '<span class="badge bg-success">Up to date</span>';
                 }
-            } else if (r.update_available === true && r.latest_ref) {
-                // Use persisted data from installed.json
-                if (pypi) {
-                    latestVer = escHtml(r.latest_ref);
-                } else {
-                    const latestShaShort = (r.latest_sha || "").substring(0, 8);
-                    latestVer = `${escHtml(r.latest_ref)} <code title="${escHtml(r.latest_sha)}">${escHtml(latestShaShort)}</code>`;
-                }
-                statusBadge = '<span class="badge bg-info text-dark">Update available</span>';
-                updateBtn = ` <button class="btn btn-outline-info btn-sm py-0 px-1"
-                                      title="Update"
-                                      onclick="pmUpdate('${escAttr(r.distribution_name)}')">
-                                  <i class="bi bi-cloud-download"></i>
-                              </button>`;
-                anyUpdate = true;
-            } else if (r.update_available === false) {
-                if (r.latest_ref) {
-                    if (pypi) {
-                        latestVer = escHtml(r.latest_ref);
-                    } else {
-                        const latestShaShort = (r.latest_sha || "").substring(0, 8);
-                        latestVer = `${escHtml(r.latest_ref)} <code title="${escHtml(r.latest_sha)}">${escHtml(latestShaShort)}</code>`;
-                    }
-                }
-                statusBadge = '<span class="badge bg-success">Up to date</span>';
+
+                statusHtml = statusBadge;
+                actionsHtml = updateBtn +
+                    ' <button class="btn btn-outline-danger btn-sm py-0 px-1" title="Uninstall" onclick="pmUninstall(\'' + escAttr(r.distribution_name) + '\')">' +
+                    '<i class="bi bi-trash"></i></button>';
+            } else {
+                statusHtml = '<span class="badge bg-success">Active</span>';
             }
 
-            tr.innerHTML = `
-                <td><code>${escHtml(r.distribution_name)}</code></td>
-                <td>${sourceLink}</td>
-                <td>${installedVer}</td>
-                <td>${latestVer}</td>
-                <td>${statusBadge}</td>
-                <td class="text-nowrap">
-                    ${updateBtn}
-                    <button class="btn btn-outline-danger btn-sm py-0 px-1"
-                            title="Uninstall"
-                            onclick="pmUninstall('${escAttr(r.distribution_name)}')">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>`;
+            tr.innerHTML =
+                "<td>" + nameHtml + "</td>" +
+                "<td>" + versionHtml + "</td>" +
+                "<td>" + sourceHtml + "</td>" +
+                "<td>" + statusHtml + "</td>" +
+                '<td class="text-nowrap">' + actionsHtml + "</td>";
             tbody.appendChild(tr);
         }
 
@@ -213,29 +240,10 @@
                 updateAllBtn.classList.add("d-none");
             }
         }
-    }
 
-    function renderLoaded(list) {
-        const empty = document.getElementById("pm-loaded-empty");
-        const wrap = document.getElementById("pm-loaded-table-wrap");
-        const tbody = document.getElementById("pm-loaded-tbody");
-        if (!empty || !wrap || !tbody) return;
-
-        if (list.length === 0) {
-            empty.classList.remove("d-none");
-            wrap.classList.add("d-none");
-            return;
-        }
-        empty.classList.add("d-none");
-        wrap.classList.remove("d-none");
-        tbody.innerHTML = "";
-        for (const p of list) {
-            const tr = document.createElement("tr");
-            const badge = p.internal
-                ? ' <span class="badge text-bg-secondary">built-in</span>'
-                : '';
-            tr.innerHTML = `<td>${escHtml(p.name)}${badge}</td><td>${escHtml(p.version)}</td>`;
-            tbody.appendChild(tr);
+        // Initialize Bootstrap tooltips on newly rendered badges
+        for (const el of tbody.querySelectorAll('[data-bs-toggle="tooltip"]')) {
+            new bootstrap.Tooltip(el);
         }
     }
 
@@ -271,13 +279,18 @@
         if (!repoUrl) return;
 
         showSpinner("Installing…");
+        showGlobalStatus("Installing plugin…");
         disableInstall();
 
         try {
             const data = await apiPost("/api/plugins/install", { repo_url: repoUrl, ref: ref });
             if (data.ok) {
-                window.location.reload();
-                return;
+                if (data.restart_required) {
+                    showRestartBanner();
+                }
+                loadPlugins();
+                loadRecommended();
+                hideResult();
             } else {
                 showResultError((data.errors || []).join("; "));
             }
@@ -285,6 +298,7 @@
             showResultError(e.message);
         } finally {
             hideSpinner();
+            hideGlobalStatus();
         }
     };
 
@@ -293,34 +307,50 @@
     window.pmUninstall = async (distName) => {
         if (!confirm("Uninstall plugin \"" + distName + "\"?")) return;
 
+        showGlobalStatus("Uninstalling " + distName + "…");
+
         try {
             const data = await apiPost("/api/plugins/uninstall", { distribution_name: distName });
             if (data.ok) {
-                window.location.reload();
-                return;
+                loadPlugins();
+                loadRecommended();
             } else {
                 alert("Uninstall failed: " + (data.errors || []).join("; "));
             }
         } catch (e) {
             alert("Uninstall error: " + e.message);
+        } finally {
+            hideGlobalStatus();
         }
     };
 
     // ---- Check updates ----
 
+    /** Fetch update info and refresh the installed table. */
+    async function fetchUpdates() {
+        const data = await apiFetch("/api/plugins/updates");
+        updateInfo = {};
+        for (const p of (data.plugins || [])) {
+            updateInfo[p.distribution_name] = p;
+        }
+        loadPlugins();
+    }
+
+    /** Silent check on init — no spinners or error alerts. */
+    function checkUpdatesQuiet() {
+        fetchUpdates().catch(() => {});
+    }
+
     window.pmCheckUpdates = async () => {
-        showSpinner("Checking for updates…");
+        showSpinner("Checking for updates\u2026");
+        showGlobalStatus("Checking for updates\u2026");
         try {
-            const data = await apiFetch("/api/plugins/updates");
-            updateInfo = {};
-            for (const p of (data.plugins || [])) {
-                updateInfo[p.distribution_name] = p;
-            }
-            loadPlugins();
+            await fetchUpdates();
         } catch (e) {
             alert("Check updates error: " + e.message);
         } finally {
             hideSpinner();
+            hideGlobalStatus();
         }
     };
 
@@ -328,11 +358,16 @@
 
     window.pmUpdate = async (distName) => {
         showSpinner("Updating " + distName + "…");
+        showGlobalStatus("Updating " + distName + "…");
         try {
             const data = await apiPost("/api/plugins/update", { distribution_name: distName });
             if (data.ok) {
-                window.location.reload();
-                return;
+                if (data.restart_required) {
+                    showRestartBanner();
+                }
+                updateInfo = {};
+                loadPlugins();
+                loadRecommended();
             } else {
                 alert("Update failed: " + (data.errors || []).join("; "));
             }
@@ -340,6 +375,7 @@
             alert("Update error: " + e.message);
         } finally {
             hideSpinner();
+            hideGlobalStatus();
         }
     };
 
@@ -349,14 +385,17 @@
         if (!confirm("Update all plugins with available updates?")) return;
 
         showSpinner("Updating all plugins…");
+        showGlobalStatus("Updating all plugins…");
         try {
             const data = await apiPost("/api/plugins/update-all", {});
             if (data.updated > 0) {
-                window.location.reload();
-                return;
+                if (data.restart_required) {
+                    showRestartBanner();
+                }
             }
             updateInfo = {};
             loadPlugins();
+            loadRecommended();
             if (data.failed > 0) {
                 alert("Some plugins failed to update: " + data.failed);
             }
@@ -364,24 +403,42 @@
             alert("Update all error: " + e.message);
         } finally {
             hideSpinner();
+            hideGlobalStatus();
         }
     };
 
-    // ---- Recommended plugins ----
+    // ---- Plugin catalog ----
+
+    let catalogData = [];  // cached catalog data for filtering
+
+    function initCatalogFilter() {
+        const filterInput = document.getElementById("pm-catalog-filter");
+        if (!filterInput) return;
+        filterInput.addEventListener("input", () => {
+            renderRecommended(catalogData, filterInput.value.trim().toLowerCase());
+        });
+    }
 
     function loadRecommended() {
         apiFetch("/api/plugins/recommended").then(data => {
-            renderRecommended(data.plugins || []);
+            catalogData = data.plugins || [];
+            renderRecommended(catalogData, "");
         }).catch(() => {});
     }
 
-    function renderRecommended(list) {
+    function renderRecommended(list, filterText) {
         const empty = document.getElementById("pm-recommended-empty");
         const wrap = document.getElementById("pm-recommended-table-wrap");
         const tbody = document.getElementById("pm-recommended-tbody");
         if (!empty || !wrap || !tbody) return;
 
-        if (list.length === 0) {
+        const filtered = filterText
+            ? list.filter(p => p.name.toLowerCase().includes(filterText) ||
+                               (p.description || "").toLowerCase().includes(filterText))
+            : list;
+
+        if (filtered.length === 0) {
+            empty.textContent = filterText ? "No plugins match the filter" : "No plugins in catalog";
             empty.classList.remove("d-none");
             wrap.classList.add("d-none");
             return;
@@ -390,7 +447,7 @@
         wrap.classList.remove("d-none");
         tbody.innerHTML = "";
 
-        for (const p of list) {
+        for (const p of filtered) {
             const tr = document.createElement("tr");
             const pypi = p.source === "pypi";
             let sourceLink;
@@ -427,11 +484,15 @@
 
     window.pmQuickInstall = async (source, version) => {
         showSpinner("Installing…");
+        showGlobalStatus("Installing plugin…");
         try {
             const data = await apiPost("/api/plugins/install", { repo_url: source, ref: version });
             if (data.ok) {
-                window.location.reload();
-                return;
+                if (data.restart_required) {
+                    showRestartBanner();
+                }
+                loadPlugins();
+                loadRecommended();
             } else {
                 showResultError((data.errors || []).join("; "));
             }
@@ -439,6 +500,7 @@
             showResultError(e.message);
         } finally {
             hideSpinner();
+            hideGlobalStatus();
         }
     };
 
@@ -452,6 +514,22 @@
     }
     function hideSpinner() {
         const el = document.getElementById("pm-spinner");
+        if (el) el.classList.add("d-none");
+    }
+
+    function showRestartBanner() {
+        const el = document.getElementById("pm-restart-banner");
+        if (el) el.classList.remove("d-none");
+    }
+
+    function showGlobalStatus(text) {
+        const el = document.getElementById("pm-global-status");
+        const txt = document.getElementById("pm-global-status-text");
+        if (el) el.classList.remove("d-none");
+        if (txt) txt.textContent = text;
+    }
+    function hideGlobalStatus() {
+        const el = document.getElementById("pm-global-status");
         if (el) el.classList.add("d-none");
     }
 
