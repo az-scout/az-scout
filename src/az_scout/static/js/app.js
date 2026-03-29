@@ -72,6 +72,10 @@ async function init() {
     // Init shared region combobox
     initRegionCombobox();
 
+    // Restore saved tab order, then set up drag-and-drop reordering
+    _restoreTabOrder();
+    _initTabDragReorder();
+
     // Hash-based tab routing (supports built-in + plugin tabs)
     const tabEl = document.querySelector('#mainTabs');
     if (tabEl) {
@@ -605,6 +609,120 @@ function _copyConsentUrl(btn, url) {
             btn.innerHTML = '<i class="bi bi-clipboard me-1"></i> Copy link for admin';
         }, 2000);
     });
+}
+
+// ---------------------------------------------------------------------------
+// Tab drag-and-drop reordering  (order persisted in localStorage)
+// ---------------------------------------------------------------------------
+const _TAB_ORDER_KEY = "azscout_tabOrder";
+
+/** Read tab IDs from the DOM in their current visual order. */
+function _readTabIds() {
+    return [...document.querySelectorAll("#mainTabs > .nav-item > [role='tab']")
+    ].map(btn => btn.id.replace(/-tab$/, ""));
+}
+
+/** Persist current tab order to localStorage. */
+function _saveTabOrder() {
+    localStorage.setItem(_TAB_ORDER_KEY, JSON.stringify(_readTabIds()));
+}
+
+/**
+ * Restore previously saved tab order.
+ * New tabs (from freshly installed plugins) are appended at the end.
+ * Stale IDs (from uninstalled plugins) are silently dropped.
+ */
+function _restoreTabOrder() {
+    const saved = JSON.parse(localStorage.getItem(_TAB_ORDER_KEY) || "[]");
+    if (!saved.length) return;
+
+    const tabBar = document.getElementById("mainTabs");
+    const tabContent = document.getElementById("mainTabContent");
+    if (!tabBar || !tabContent) return;
+
+    // Build a lookup of current items
+    const liById = {};
+    const paneById = {};
+    for (const li of [...tabBar.querySelectorAll(".nav-item")]) {
+        const btn = li.querySelector("[role='tab']");
+        if (btn) liById[btn.id.replace(/-tab$/, "")] = li;
+    }
+    for (const pane of [...tabContent.querySelectorAll(".tab-pane")]) {
+        paneById[pane.id.replace(/^tab-/, "")] = pane;
+    }
+
+    // Append in saved order (moves existing DOM nodes)
+    for (const id of saved) {
+        if (liById[id]) tabBar.appendChild(liById[id]);
+        if (paneById[id]) tabContent.appendChild(paneById[id]);
+    }
+    // Any new tabs not in the saved list stay at the end (already there)
+}
+
+/** Enable HTML5 drag-and-drop on main tab bar items. */
+function _initTabDragReorder() {
+    const tabBar = document.getElementById("mainTabs");
+    if (!tabBar) return;
+
+    let dragItem = null;
+
+    for (const li of tabBar.querySelectorAll(".nav-item")) {
+        li.setAttribute("draggable", "true");
+
+        li.addEventListener("dragstart", (e) => {
+            dragItem = li;
+            li.classList.add("tab-dragging");
+            e.dataTransfer.effectAllowed = "move";
+            // Firefox requires setData to fire drag events
+            e.dataTransfer.setData("text/plain", "");
+        });
+
+        li.addEventListener("dragend", () => {
+            if (dragItem) dragItem.classList.remove("tab-dragging");
+            dragItem = null;
+            for (const i of tabBar.querySelectorAll(".nav-item")) {
+                i.classList.remove("tab-drag-over");
+            }
+        });
+
+        li.addEventListener("dragover", (e) => {
+            if (!dragItem || dragItem === li) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+            li.classList.add("tab-drag-over");
+        });
+
+        li.addEventListener("dragleave", () => {
+            li.classList.remove("tab-drag-over");
+        });
+
+        li.addEventListener("drop", (e) => {
+            e.preventDefault();
+            li.classList.remove("tab-drag-over");
+            if (!dragItem || dragItem === li) return;
+
+            // Determine drop position (before or after)
+            const rect = li.getBoundingClientRect();
+            const midX = rect.left + rect.width / 2;
+            if (e.clientX < midX) {
+                tabBar.insertBefore(dragItem, li);
+            } else {
+                tabBar.insertBefore(dragItem, li.nextSibling);
+            }
+
+            // Sync tab-content pane order to match
+            const tabContent = document.getElementById("mainTabContent");
+            if (tabContent) {
+                const newOrder = _readTabIds();
+                for (const id of newOrder) {
+                    const pane = document.getElementById("tab-" + id);
+                    if (pane) tabContent.appendChild(pane);
+                }
+            }
+
+            _saveTabOrder();
+        });
+    }
 }
 
 // ---------------------------------------------------------------------------

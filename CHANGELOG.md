@@ -7,6 +7,10 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
 ## Unreleased
 
+### Added
+
+- **Tab reordering** – Main tabs can be reordered via drag-and-drop. The custom order is persisted in `localStorage` and restored on page load. A grip icon (⠿) appears on hover to indicate draggability. New plugin tabs are appended at the end; stale tabs from uninstalled plugins are silently dropped.
+
 ## [2026.3.8] - 2026-03-28
 
 ### Added
