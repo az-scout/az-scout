@@ -672,3 +672,35 @@ body.chat-pinned > footer {
         background: radial-gradient(circle, rgba(0, 120, 212, 0.25) 0%, transparent 70%);
     }
 }
+
+/* ── Tab drag-and-drop reordering ── */
+#mainTabs > .nav-item[draggable="true"] {
+    cursor: grab;
+}
+
+#mainTabs > .nav-item[draggable="true"] > .nav-link::before {
+    content: "\u2800";
+    display: inline-block;
+    width: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: width 0.15s ease, opacity 0.15s ease;
+    vertical-align: middle;
+    font-size: 0.7rem;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+#mainTabs > .nav-item[draggable="true"]:hover > .nav-link::before {
+    content: "⠿";
+    width: 1rem;
+    opacity: 0.6;
+}
+
+#mainTabs > .nav-item.tab-dragging {
+    opacity: 0.4;
+    cursor: grabbing;
+}
+
+#mainTabs > .nav-item.tab-drag-over {
+    border-left: 3px solid var(--bs-primary, #0d6efd);
+}
