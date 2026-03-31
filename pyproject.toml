@@ -68,6 +68,7 @@ dev = [
     "mkdocs-material>=9.5",
     "mkdocs>=1.6,<2",
     "neoteroi-mkdocs>=1.2.0",
+    "pygments>=2.18,<2.20",  # 2.20 has html.escape(None) bug with pymdownx
 ]
 
 [tool.pytest.ini_options]
