@@ -246,6 +246,23 @@ Get retail pricing for a SKU in a region.
 
 ---
 
+### `GET /api/sku-detail`
+
+Get full detail for a single SKU: VM profile, pricing (all tiers), and deployment confidence.
+
+**Query parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `region` | `string` | Azure region name |
+| `sku` | `string` | SKU name (e.g. `Standard_D4s_v5`) |
+| `subscriptionId` | `string` *(optional)* | Subscription ID (enables profile + confidence) |
+| `tenantId` | `string` *(optional)* | Tenant ID |
+| `currencyCode` | `string` *(optional)* | ISO 4217 currency code (default: `USD`) |
+| `instanceCount` | `int` *(optional)* | Instance count for confidence scoring (default: `1`) |
+
+---
+
 ## Plugin Manager Endpoints
 
 ### `GET /api/plugins`
