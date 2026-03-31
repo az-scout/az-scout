@@ -269,33 +269,3 @@ async def get_spot_scores(body: SpotScoresRequest) -> JSONResponse:
         body.tenantId,
     )
     return JSONResponse(result)
-
-
-# ---------------------------------------------------------------------------
-# GET /api/sku-pricing
-# ---------------------------------------------------------------------------
-
-
-@router.get("/sku-pricing", tags=["Plugin: planner"], summary="Get detailed pricing for a SKU")
-async def get_sku_pricing(
-    region: str = Query(..., description="Azure region name."),
-    skuName: str = Query(..., description="ARM SKU name (e.g. Standard_D2s_v3)."),  # noqa: N803
-    currencyCode: str = Query(  # noqa: N803
-        "USD", description="ISO 4217 currency code."
-    ),
-    subscriptionId: str | None = Query(  # noqa: N803
-        None, description="Subscription ID for VM profile data."
-    ),
-    tenantId: str | None = Query(None, description="Optional tenant ID."),  # noqa: N803
-) -> JSONResponse:
-    """Return detailed Linux pricing for a single VM SKU."""
-    result = await asyncio.to_thread(
-        azure_api.get_sku_pricing_detail, region, skuName, currencyCode
-    )
-    if subscriptionId:
-        profile = await asyncio.to_thread(
-            azure_api.get_sku_profile, region, subscriptionId, skuName, tenantId
-        )
-        if profile is not None:
-            result["profile"] = profile
-    return JSONResponse(result)

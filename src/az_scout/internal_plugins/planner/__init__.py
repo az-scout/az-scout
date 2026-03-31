@@ -38,14 +38,14 @@ class PlannerPlugin:
         from az_scout.internal_plugins.planner.tools import (
             get_sku_availability,
             get_sku_deployment_confidence,
-            get_sku_pricing_detail,
+            get_sku_detail,
             get_spot_scores,
         )
 
         return [
             get_sku_availability,
             get_sku_deployment_confidence,
-            get_sku_pricing_detail,
+            get_sku_detail,
             get_spot_scores,
         ]
 

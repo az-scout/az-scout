@@ -233,19 +233,6 @@ Get Spot Placement Scores for VM sizes in a region.
 
 ---
 
-### `GET /api/sku-pricing`
-
-Get retail pricing for a SKU in a region.
-
-**Query parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `region` | `string` | Azure region name |
-| `skuName` | `string` | SKU name (e.g. `Standard_D4s_v5`) |
-
----
-
 ### `GET /api/sku-detail`
 
 Get full detail for a single SKU: VM profile, pricing (all tiers), and deployment confidence.

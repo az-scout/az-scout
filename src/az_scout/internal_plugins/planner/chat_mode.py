@@ -51,7 +51,7 @@ Steps:
 Decision criteria:
 - **Hardware requirements**: vCPU count, memory, GPU, accelerated networking, \
   disk throughput, temp storage — query live data first via `get_sku_availability` \
-  (returns full capabilities per SKU) and `get_sku_pricing_detail` (includes a \
+  (returns full capabilities per SKU) and `get_sku_detail` (includes a \
   `profile` with all ARM capabilities when a `subscription_id` is provided). \
   Use your built-in knowledge of Azure VM families for workload-specific guidance \
   (e.g. M-series for SAP, NC/ND-series for ML training, HB-series for HPC).
@@ -62,7 +62,7 @@ Decision criteria:
   use whatever the user typed and it will match (e.g. `name: "FX48-v2"` \
   matches `Standard_FX48mds_v2`). **Important**: always call `get_sku_availability` \
   first to discover correct ARM names, then use those exact names for \
-  `get_sku_pricing_detail` and `get_spot_scores`.
+  `get_sku_detail` and `get_spot_scores`.
 - **Capacity**: Zone availability, restrictions, and confidence score.
 - **Price**: Hourly cost (pay-as-you-go), and whether Spot or Azure Batch \
   pricing is attractive.
@@ -82,7 +82,7 @@ Steps:
    in favour of more "premium" ones — always include the lowest-price options. \
    When the user asks "cheapest", you MUST scan ALL results from the tool, not \
    just the ones you previously presented.
-4. For specific SKUs, call `get_sku_pricing_detail` with a `subscription_id` \
+4. For specific SKUs, call `get_sku_detail` with a `subscription_id` \
    to get the full ARM profile (all capabilities) plus Spot/Reserved/Savings \
    Plan prices. **Never call this tool with a user-friendly name like "M128" — \
    always call `get_sku_availability` first** to discover the exact ARM names.

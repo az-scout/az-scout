@@ -1537,8 +1537,8 @@ class TestGetSkusPricing:
         assert pricing["spot"] == 1.44
 
 
-class TestGetSkuPricingDetail:
-    """Tests for GET /api/sku-pricing endpoint."""
+class TestGetSkuDetail:
+    """Tests for GET /api/sku-detail endpoint."""
 
     @staticmethod
     def _retail_response(items):
@@ -1594,7 +1594,7 @@ class TestGetSkuPricingDetail:
             "az_scout.azure_api.requests.get",
             return_value=self._retail_response(items),
         ):
-            resp = client.get("/api/sku-pricing?region=eastus&skuName=Standard_D2s_v3")
+            resp = client.get("/api/sku-detail?region=eastus&sku=Standard_D2s_v3")
 
         assert resp.status_code == 200
         data = resp.json()
@@ -1631,7 +1631,7 @@ class TestGetSkuPricingDetail:
             "az_scout.azure_api.requests.get",
             return_value=self._retail_response(items),
         ):
-            resp = client.get("/api/sku-pricing?region=eastus&skuName=Standard_D2s_v3")
+            resp = client.get("/api/sku-detail?region=eastus&sku=Standard_D2s_v3")
 
         data = resp.json()
         assert data["paygo"] == 0.096  # Linux price, not Windows
@@ -1660,7 +1660,7 @@ class TestGetSkuPricingDetail:
             "az_scout.azure_api.requests.get",
             return_value=self._retail_response(items),
         ):
-            resp = client.get("/api/sku-pricing?region=eastus&skuName=Standard_D2s_v3")
+            resp = client.get("/api/sku-detail?region=eastus&sku=Standard_D2s_v3")
 
         data = resp.json()
         assert data["paygo"] == 0.096
@@ -1682,9 +1682,7 @@ class TestGetSkuPricingDetail:
             "az_scout.azure_api.requests.get",
             return_value=self._retail_response(items),
         ):
-            resp = client.get(
-                "/api/sku-pricing?region=eastus&skuName=Standard_D2s_v3&currencyCode=EUR"
-            )
+            resp = client.get("/api/sku-detail?region=eastus&sku=Standard_D2s_v3&currencyCode=EUR")
 
         data = resp.json()
         assert data["currency"] == "EUR"
@@ -1696,7 +1694,7 @@ class TestGetSkuPricingDetail:
             "az_scout.azure_api.requests.get",
             return_value=self._retail_response([]),
         ):
-            resp = client.get("/api/sku-pricing?region=eastus&skuName=Standard_NONEXIST")
+            resp = client.get("/api/sku-detail?region=eastus&sku=Standard_NONEXIST")
 
         assert resp.status_code == 200
         data = resp.json()
@@ -1709,20 +1707,20 @@ class TestGetSkuPricingDetail:
 
     def test_missing_required_params(self, client):
         """Missing region or skuName should return 422."""
-        resp = client.get("/api/sku-pricing?region=eastus")
+        resp = client.get("/api/sku-detail?region=eastus")
         assert resp.status_code == 422
 
-        resp = client.get("/api/sku-pricing?skuName=Standard_D2s_v3")
+        resp = client.get("/api/sku-detail?sku=Standard_D2s_v3")
         assert resp.status_code == 422
 
 
 # ---------------------------------------------------------------------------
-# VM profile via GET /api/sku-pricing?subscriptionId=...
+# VM profile via GET /api/sku-detail?subscriptionId=...
 # ---------------------------------------------------------------------------
 
 
 class TestSkuProfile:
-    """Tests for VM profile enrichment on /api/sku-pricing."""
+    """Tests for VM profile enrichment on /api/sku-detail."""
 
     _SAMPLE_SKU = {
         "name": "Standard_D2s_v3",
@@ -1801,7 +1799,7 @@ class TestSkuProfile:
             side_effect=self._mock_dispatch([self._SAMPLE_SKU], [self._RETAIL_ITEM]),
         ):
             resp = client.get(
-                "/api/sku-pricing?region=eastus&skuName=Standard_D2s_v3&subscriptionId=sub-1"
+                "/api/sku-detail?region=eastus&sku=Standard_D2s_v3&subscriptionId=sub-1"
             )
 
         assert resp.status_code == 200
@@ -1832,7 +1830,7 @@ class TestSkuProfile:
             "az_scout.azure_api.requests.get",
             return_value=retail_resp,
         ):
-            resp = client.get("/api/sku-pricing?region=eastus&skuName=Standard_D2s_v3")
+            resp = client.get("/api/sku-detail?region=eastus&sku=Standard_D2s_v3")
 
         assert resp.status_code == 200
         data = resp.json()
@@ -1845,7 +1843,7 @@ class TestSkuProfile:
             side_effect=self._mock_dispatch([], [self._RETAIL_ITEM]),
         ):
             resp = client.get(
-                "/api/sku-pricing?region=eastus&skuName=Standard_NONEXIST&subscriptionId=sub-1"
+                "/api/sku-detail?region=eastus&sku=Standard_NONEXIST&subscriptionId=sub-1"
             )
 
         assert resp.status_code == 200
@@ -1860,7 +1858,7 @@ class TestSkuProfile:
             side_effect=self._mock_dispatch([sku], [self._RETAIL_ITEM]),
         ):
             resp = client.get(
-                "/api/sku-pricing?region=eastus&skuName=Standard_D2s_v3&subscriptionId=sub-1"
+                "/api/sku-detail?region=eastus&sku=Standard_D2s_v3&subscriptionId=sub-1"
             )
 
         data = resp.json()
@@ -1873,7 +1871,7 @@ class TestSkuProfile:
             side_effect=self._mock_dispatch([self._SAMPLE_SKU], [self._RETAIL_ITEM]),
         ):
             resp = client.get(
-                "/api/sku-pricing?region=eastus&skuName=Standard_D2s_v3"
+                "/api/sku-detail?region=eastus&sku=Standard_D2s_v3"
                 "&subscriptionId=sub-1&tenantId=tid-1"
             )
 
@@ -1900,7 +1898,7 @@ class TestSkuProfile:
             side_effect=self._mock_dispatch([sku], [self._RETAIL_ITEM]),
         ):
             resp = client.get(
-                "/api/sku-pricing?region=eastus&skuName=Standard_D2s_v3&subscriptionId=sub-1"
+                "/api/sku-detail?region=eastus&sku=Standard_D2s_v3&subscriptionId=sub-1"
             )
 
         caps = resp.json()["profile"]["capabilities"]

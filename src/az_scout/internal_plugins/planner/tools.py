@@ -251,7 +251,7 @@ def get_sku_deployment_confidence(
     )
 
 
-def get_sku_pricing_detail(
+def get_sku_detail(
     region: Annotated[str, Field(description="Azure region name (e.g. swedencentral).")],
     sku_name: Annotated[
         str,
@@ -269,31 +269,45 @@ def get_sku_pricing_detail(
         Field(
             description=(
                 "Subscription ID — provide this to unlock the full VM profile "
-                "(capabilities, zones, restrictions). Without it, only pricing is returned."
+                "(capabilities, zones, restrictions) and deployment confidence. "
+                "Without it, only pricing is returned."
             )
         ),
     ] = None,
+    instance_count: Annotated[
+        int, Field(description="Number of instances for confidence scoring (default: 1).")
+    ] = 1,
     tenant_id: Annotated[str | None, Field(description="Optional tenant ID.")] = None,
 ) -> str:
-    """Get detailed Linux pricing AND full technical profile for a single VM SKU.
+    """Get detailed pricing, full VM profile, and deployment confidence for a single SKU.
 
     Returns per-hour prices for every pricing model: pay-as-you-go, Spot,
     Reserved Instance (1 Year / 3 Years) and Savings Plan (1 Year / 3 Years).
 
     All prices are **per hour, Linux only**.
 
-    When ``subscription_id`` is provided, the response also includes a
-    ``profile`` object with full VM capabilities (compute, storage, network),
-    deployment info (zones, restrictions, HyperV generation) and more.
+    When ``subscription_id`` is provided, the response also includes:
+    - ``profile``: full VM capabilities (compute, storage, network),
+      deployment info (zones, restrictions, HyperV generation).
+    - ``confidence``: Deployment Confidence Score (0–100) based on quota,
+      zone availability, restrictions, and price pressure.
 
     **Important:** ``sku_name`` must be the exact ARM SKU name
     (e.g. ``Standard_M128s_v2``, **not** ``M128``). Call
     ``get_sku_availability`` first to discover correct ARM names.
     """
+    from az_scout.scoring.deployment_confidence import (
+        compute_deployment_confidence,
+        signals_from_sku,
+    )
+
     result = azure_api.get_sku_pricing_detail(region, sku_name, currency_code)
     actual_name = result.get("skuName", sku_name)
     if subscription_id:
         profile = azure_api.get_sku_profile(region, subscription_id, actual_name, tenant_id)
         if profile is not None:
             result["profile"] = profile
+            sig = signals_from_sku(profile, instance_count=instance_count)
+            confidence = compute_deployment_confidence(sig)
+            result["confidence"] = confidence.model_dump()
     return json.dumps(result, indent=2)

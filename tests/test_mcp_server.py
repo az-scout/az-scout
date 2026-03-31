@@ -16,7 +16,7 @@ def _register_internal_tools():
     from az_scout.internal_plugins.planner.tools import (
         get_sku_availability,
         get_sku_deployment_confidence,
-        get_sku_pricing_detail,
+        get_sku_detail,
         get_spot_scores,
     )
     from az_scout.internal_plugins.topology.tools import get_zone_mappings
@@ -26,7 +26,7 @@ def _register_internal_tools():
         get_sku_availability,
         get_spot_scores,
         get_sku_deployment_confidence,
-        get_sku_pricing_detail,
+        get_sku_detail,
     ]:
         with contextlib.suppress(Exception):
             mcp.tool()(fn)
@@ -590,12 +590,12 @@ class TestMcpDeploymentConfidence:
 
 
 # ---------------------------------------------------------------------------
-# get_sku_pricing_detail
+# get_sku_detail
 # ---------------------------------------------------------------------------
 
 
 class TestMcpGetSkuPricingDetail:
-    """Tests for the get_sku_pricing_detail MCP tool."""
+    """Tests for the get_sku_detail MCP tool."""
 
     @pytest.mark.anyio()
     async def test_returns_pricing_detail_json(self, _mock_credential):
@@ -615,7 +615,7 @@ class TestMcpGetSkuPricingDetail:
             return_value=mock_result,
         ):
             content, _ = await mcp.call_tool(
-                "get_sku_pricing_detail",
+                "get_sku_detail",
                 {"region": "swedencentral", "sku_name": "Standard_D2s_v5"},
             )
 
@@ -632,7 +632,7 @@ class TestMcpGetSkuPricingDetail:
             return_value={},
         ) as mock_fn:
             _, _ = await mcp.call_tool(
-                "get_sku_pricing_detail",
+                "get_sku_detail",
                 {
                     "region": "eastus",
                     "sku_name": "Standard_D4s_v3",
@@ -661,7 +661,7 @@ class TestMcpGetSkuPricingDetail:
             ) as mock_prof,
         ):
             content, _ = await mcp.call_tool(
-                "get_sku_pricing_detail",
+                "get_sku_detail",
                 {
                     "region": "eastus",
                     "sku_name": "Standard_D2s_v5",
@@ -687,7 +687,7 @@ class TestMcpGetSkuPricingDetail:
             patch("az_scout.azure_api.get_sku_profile") as mock_prof,
         ):
             content, _ = await mcp.call_tool(
-                "get_sku_pricing_detail",
+                "get_sku_detail",
                 {"region": "eastus", "sku_name": "Standard_D2s_v5"},
             )
 
