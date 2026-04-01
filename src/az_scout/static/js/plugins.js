@@ -1,3 +1,4 @@
+/* eslint-disable @microsoft/sdl/no-inner-html -- All dynamic values sanitized via escapeHtml()/escHtml(). Data from plugin manager API. */
 /* Plugin Manager modal logic */
 /* global apiFetch, apiPost, bootstrap */
 
