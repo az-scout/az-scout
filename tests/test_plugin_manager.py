@@ -2033,3 +2033,94 @@ class TestInstallRestartRequired:
         data = resp.json()
         assert data["ok"] is True
         assert data["restart_required"] is True
+
+
+# ---------------------------------------------------------------------------
+# Core version compatibility check
+# ---------------------------------------------------------------------------
+
+
+class TestCoreVersionCompat:
+    """Tests for check_core_version_compat."""
+
+    def test_compatible_version(self) -> None:
+        from az_scout.plugin_manager._compat import check_core_version_compat
+
+        with patch("az_scout.plugin_manager._compat.get_core_version", return_value="2026.3.8"):
+            ok, msg = check_core_version_compat(["az-scout>=2026.3.7"])
+        assert ok is True
+        assert msg == ""
+
+    def test_incompatible_version(self) -> None:
+        from az_scout.plugin_manager._compat import check_core_version_compat
+
+        with patch("az_scout.plugin_manager._compat.get_core_version", return_value="2026.3.7"):
+            ok, msg = check_core_version_compat(["az-scout>=2026.3.8"])
+        assert ok is False
+        assert "2026.3.7" in msg
+        assert "2026.3.8" in msg
+
+    def test_no_version_constraint(self) -> None:
+        from az_scout.plugin_manager._compat import check_core_version_compat
+
+        with patch("az_scout.plugin_manager._compat.get_core_version", return_value="2026.3.7"):
+            ok, msg = check_core_version_compat(["az-scout"])
+        assert ok is True
+
+    def test_az_scout_not_in_deps(self) -> None:
+        from az_scout.plugin_manager._compat import check_core_version_compat
+
+        with patch("az_scout.plugin_manager._compat.get_core_version", return_value="2026.3.7"):
+            ok, msg = check_core_version_compat(["fastapi>=0.100"])
+        assert ok is True
+
+    def test_dev_version_skips_check(self) -> None:
+        from az_scout.plugin_manager._compat import check_core_version_compat
+
+        with patch(
+            "az_scout.plugin_manager._compat.get_core_version", return_value="2026.3.9.dev4"
+        ):
+            ok, msg = check_core_version_compat(["az-scout>=2099.1.0"])
+        assert ok is True
+
+    def test_complex_specifier(self) -> None:
+        from az_scout.plugin_manager._compat import check_core_version_compat
+
+        with patch("az_scout.plugin_manager._compat.get_core_version", return_value="2026.3.7"):
+            ok, msg = check_core_version_compat(["az-scout>=2026.3.5,<2027.0.0"])
+        assert ok is True
+
+    def test_complex_specifier_fail(self) -> None:
+        from az_scout.plugin_manager._compat import check_core_version_compat
+
+        with patch("az_scout.plugin_manager._compat.get_core_version", return_value="2027.1.0"):
+            ok, msg = check_core_version_compat(["az-scout>=2026.3.5,<2027.0.0"])
+        assert ok is False
+
+    def test_case_insensitive(self) -> None:
+        from az_scout.plugin_manager._compat import check_core_version_compat
+
+        with patch("az_scout.plugin_manager._compat.get_core_version", return_value="2026.3.7"):
+            ok, msg = check_core_version_compat(["Az-Scout>=2026.3.7"])
+        assert ok is True
+
+
+class TestCoreConstraintFile:
+    """Tests for _write_core_constraint."""
+
+    def test_writes_constraint(self) -> None:
+        from az_scout.plugin_manager._installer import _write_core_constraint
+
+        with patch("az_scout.__version__", "2026.3.8"):
+            path = _write_core_constraint()
+        assert path is not None
+        content = Path(path).read_text()
+        assert "az-scout==2026.3.8" in content
+        Path(path).unlink()
+
+    def test_skips_dev_version(self) -> None:
+        from az_scout.plugin_manager._installer import _write_core_constraint
+
+        with patch("az_scout.__version__", "2026.3.9.dev4"):
+            path = _write_core_constraint()
+        assert path is None
