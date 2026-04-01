@@ -53,5 +53,8 @@ USER scout
 
 EXPOSE 8000
 
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+
 # Container listens on 0.0.0.0:8000, no browser auto-open
 ENTRYPOINT ["az-scout", "web", "--host", "0.0.0.0", "--port", "8000", "--no-open", "--proxy-headers"]
