@@ -13,6 +13,7 @@
     if (!container) return;
     try {
         const resp = await fetch("/internal/topology/static/html/topology-tab.html");
+        // eslint-disable-next-line @microsoft/sdl/no-inner-html -- trusted HTML fragment from own server, not user input
         if (resp.ok) container.innerHTML = await resp.text();
     } catch { /* template already inline – nothing to do */ }
 
@@ -47,17 +48,27 @@ function renderTopoSubList(filter) {
         : subscriptions;
 
     if (!list.length && !filter) {
-        container.innerHTML = '<span class="text-body-secondary small">No subscriptions found</span>';
+        container.replaceChildren();
+        const span = document.createElement("span");
+        span.className = "text-body-secondary small";
+        span.textContent = "No subscriptions found";
+        container.appendChild(span);
         return;
     }
-    container.innerHTML = list.map(s => {
-        const checked = topoSelectedSubs.has(s.id) ? "checked" : "";
-        return `<label title="${escapeHtml(s.name)}">
-            <input type="checkbox" class="form-check-input me-1" value="${s.id}" ${checked}
-                   onchange="topoToggleSub('${s.id}')">
-            ${escapeHtml(s.name)}
-        </label>`;
-    }).join("");
+    container.replaceChildren();
+    list.forEach(s => {
+        const label = document.createElement("label");
+        label.title = s.name;
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.className = "form-check-input me-1";
+        cb.value = s.id;
+        cb.checked = topoSelectedSubs.has(s.id);
+        cb.addEventListener("change", () => topoToggleSub(s.id));
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(" " + s.name));
+        container.appendChild(label);
+    });
     updateTopoSubCount();
 }
 
@@ -136,12 +147,15 @@ function pzClass(physicalZone) {
 function renderGraph(data) {
     const container = document.getElementById("graph-container");
     const legendContainer = document.getElementById("graph-legend");
-    container.innerHTML = "";
-    legendContainer.innerHTML = "";
+    container.replaceChildren();
+    legendContainer.replaceChildren();
 
     const validData = data.filter(d => d.mappings && d.mappings.length > 0);
     if (!validData.length) {
-        container.innerHTML = '<p class="text-body-secondary text-center py-3">No zone mappings available.</p>';
+        const p = document.createElement("p");
+        p.className = "text-body-secondary text-center py-3";
+        p.textContent = "No zone mappings available.";
+        container.appendChild(p);
         return;
     }
 
@@ -301,8 +315,13 @@ function renderGraph(data) {
     validData.forEach((sub, i) => {
         const item = document.createElement("div");
         item.className = "legend-item";
-        item.innerHTML = `<span class="legend-swatch" style="background:${colorScale(sub.subscriptionId)}"></span>
-            <span>${escapeHtml(getSubName(sub.subscriptionId))}</span>`;
+        const swatch = document.createElement("span");
+        swatch.className = "legend-swatch";
+        swatch.style.background = colorScale(sub.subscriptionId);
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = getSubName(sub.subscriptionId);
+        item.appendChild(swatch);
+        item.appendChild(nameSpan);
         item.addEventListener("mouseenter", () => highlightSub(i, validData));
         item.addEventListener("mouseleave", clearHighlight);
         legendContainer.appendChild(item);
@@ -369,10 +388,13 @@ function clearHighlight() {
 // ---------------------------------------------------------------------------
 function renderTable(data) {
     const container = document.getElementById("table-container");
-    container.innerHTML = "";
+    container.replaceChildren();
     const validData = data.filter(d => d.mappings && d.mappings.length > 0);
     if (!validData.length) {
-        container.innerHTML = '<p class="text-body-secondary">No zone mappings available.</p>';
+        const p = document.createElement("p");
+        p.className = "text-body-secondary";
+        p.textContent = "No zone mappings available.";
+        container.appendChild(p);
         return;
     }
     const logicalZones = [...new Set(validData.flatMap(d => d.mappings.map(m => m.logicalZone)))].sort();
