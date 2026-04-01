@@ -22,7 +22,7 @@ _UUID_RE = re.compile(
 # Maximum characters for a single tool result in the conversation context.
 # Large results (e.g. get_sku_availability with 300+ SKUs) are truncated to
 # keep the total prompt under the model's token limit and avoid 429 errors.
-_MAX_TOOL_RESULT_CHARS = 30_000
+_MAX_TOOL_RESULT_CHARS = 150_000
 
 
 def _validate_subscription_id(value: str | None, param: str = "subscription_id") -> str | None:
