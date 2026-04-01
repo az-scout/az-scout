@@ -92,6 +92,9 @@ class TestBuildSystemPrompt:
 # ---------------------------------------------------------------------------
 
 
+@patch("az_scout.services.ai_chat._config.AZURE_OPENAI_ENDPOINT", "")
+@patch("az_scout.services.ai_chat._config.AZURE_OPENAI_API_KEY", "")
+@patch("az_scout.services.ai_chat._config.AZURE_OPENAI_DEPLOYMENT", "")
 class TestChatEndpointMode:
     """Tests for the /api/chat endpoint with mode parameter."""
 
@@ -163,18 +166,18 @@ class TestTruncateToolResult:
                 "zones": ["1", "2", "3"],
                 "capabilities": {"MemoryGB": str(i * 4), "PremiumIO": "True"},
             }
-            for i in range(500)
+            for i in range(3000)  # ~580k chars — well above 150k limit
         ]
         result = json.dumps(items, indent=2)
         truncated = _truncate_tool_result(result)
         assert len(truncated) < len(result)
         assert "omitted" in truncated
-        assert "total: 500" in truncated
+        assert "total: 3000" in truncated
 
     def test_large_string_truncated(self):
-        result = "x" * 50_000
+        result = "x" * 200_000  # above 150k limit
         truncated = _truncate_tool_result(result)
-        assert len(truncated) <= 30_100  # budget + "(truncated)"
+        assert len(truncated) <= 150_100  # budget + "(truncated)"
         assert "truncated" in truncated
 
     def test_small_array_unchanged(self):
@@ -401,6 +404,9 @@ class TestPostProcessToolResult:
 # ---------------------------------------------------------------------------
 
 
+@patch("az_scout.services.ai_chat._config.AZURE_OPENAI_ENDPOINT", "")
+@patch("az_scout.services.ai_chat._config.AZURE_OPENAI_API_KEY", "")
+@patch("az_scout.services.ai_chat._config.AZURE_OPENAI_DEPLOYMENT", "")
 class TestAiCompleteEndpoint:
     """Tests for the /api/ai/complete endpoint."""
 
