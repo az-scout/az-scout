@@ -33,6 +33,10 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 - **Auto update check** – Plugin Manager silently checks for updates when opened, showing results immediately.
 - **CSP: shields.io** – Added `img.shields.io` to the Content-Security-Policy `img-src` directive for PyPI version badges.
 
+### Fixed
+
+- **Plugin core version guard** – Plugin Manager now validates that a plugin's `az-scout` version requirement is compatible with the running instance before install. Incompatible plugins are blocked with a clear error. A pip constraint file also prevents pip from installing a different core version into the packages directory.
+
 ### Changed
 
 - **Plugin Manager layout** – Replaced table-based views with a card grid layout matching the catalog style. All plugins (catalog, installed, built-in, external) shown in a unified card grid with a filter, action bar, and manual install card.

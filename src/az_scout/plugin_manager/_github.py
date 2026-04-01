@@ -183,12 +183,18 @@ def validate_plugin_repo(repo_url: str, ref: str = "") -> PluginValidationResult
             else:
                 result.entry_points[str(key)] = val
 
-    deps = [str(d).lower() for d in project.get("dependencies", [])]
-    dep_names = [re.split(r"[<>=!~\[;@ ]", d)[0].strip() for d in deps]
+    deps = [str(d) for d in project.get("dependencies", [])]
+    dep_names = [re.split(r"[<>=!~\[;@ ]", d.lower())[0].strip() for d in deps]
     if "az-scout" not in dep_names:
         result.warnings.append(
             "project.dependencies does not include 'az-scout' – plugin may fail at runtime"
         )
+    else:
+        from az_scout.plugin_manager._compat import check_core_version_compat
+
+        compat_ok, compat_msg = check_core_version_compat(deps)
+        if not compat_ok:
+            result.errors.append(compat_msg)
 
     req_python = project.get("requires-python", "")
     if req_python:

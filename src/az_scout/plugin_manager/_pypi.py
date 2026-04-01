@@ -86,6 +86,12 @@ def validate_pypi_plugin(package_name: str, version: str = "") -> PluginValidati
         result.warnings.append(
             "Package dependencies do not include 'az-scout' — plugin may fail at runtime"
         )
+    else:
+        from az_scout.plugin_manager._compat import check_core_version_compat
+
+        compat_ok, compat_msg = check_core_version_compat(requires_dist)
+        if not compat_ok:
+            result.errors.append(compat_msg)
 
     project_urls: dict[str, str] = info.get("project_urls") or {}
     if project_urls:
