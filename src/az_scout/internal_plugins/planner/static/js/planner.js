@@ -13,6 +13,7 @@
     if (!container) return;
     try {
         const resp = await fetch("/internal/planner/static/html/planner-tab.html");
+        // eslint-disable-next-line @microsoft/sdl/no-inner-html -- trusted HTML fragment from own server, not user input
         if (resp.ok) container.innerHTML = await resp.text();
     } catch { /* template already inline – nothing to do */ }
 
@@ -166,11 +167,18 @@ function renderPlannerSubDropdown(filter) {
     const matches = lc
         ? subscriptions.filter(s => s.name.toLowerCase().includes(lc) || s.id.toLowerCase().includes(lc))
         : subscriptions;
-    dropdown.innerHTML = matches.map(s =>
-        `<li class="dropdown-item" data-value="${s.id}">${escapeHtml(s.name)} <span class="region-name">(${s.id.slice(0, 8)}\u2026)</span></li>`
-    ).join("");
-    dropdown.querySelectorAll("li").forEach(li => {
-        li.addEventListener("click", () => selectPlannerSub(li.dataset.value));
+    dropdown.replaceChildren();
+    matches.forEach(s => {
+        const li = document.createElement("li");
+        li.className = "dropdown-item";
+        li.dataset.value = s.id;
+        li.appendChild(document.createTextNode(s.name + " "));
+        const span = document.createElement("span");
+        span.className = "region-name";
+        span.textContent = "(" + s.id.slice(0, 8) + "\u2026)";
+        li.appendChild(span);
+        li.addEventListener("click", () => selectPlannerSub(s.id));
+        dropdown.appendChild(li);
     });
     // Enable search input once subscriptions are loaded
     const searchInput = document.getElementById("planner-sub-search");
@@ -280,10 +288,15 @@ async function includeSpotInConfidence() {
     if (!subscriptionId || !region) return;
 
     const btn = document.querySelector('.confidence-controls .btn-outline-primary');
-    const origHtml = btn?.innerHTML;
+    const origNodes = btn ? [...btn.childNodes].map(n => n.cloneNode(true)) : [];
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Calculating…';
+        btn.textContent = "";
+        const sp = document.createElement("span");
+        sp.className = "spinner-border spinner-border-sm me-1";
+        sp.setAttribute("role", "status");
+        btn.appendChild(sp);
+        btn.appendChild(document.createTextNode("Calculating…"));
     }
     const instanceCount = parseInt(document.getElementById("confidence-instance-count")?.value, 10) || 1;
     const currency = document.getElementById("planner-currency")?.value || "USD";
@@ -334,7 +347,7 @@ async function includeSpotInConfidence() {
         }
     } catch (err) {
         showError("planner-error", "Failed to include Spot in confidence: " + err.message);
-        if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+        if (btn) { btn.disabled = false; btn.replaceChildren(...origNodes); }
     }
 }
 
@@ -350,10 +363,15 @@ async function resetToBasicConfidence() {
     if (!subscriptionId || !region) return;
 
     const btn = document.querySelector('.confidence-controls .btn-outline-success');
-    const origHtml = btn?.innerHTML;
+    const origNodes = btn ? [...btn.childNodes].map(n => n.cloneNode(true)) : [];
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Recalculating…';
+        btn.textContent = "";
+        const sp = document.createElement("span");
+        sp.className = "spinner-border spinner-border-sm me-1";
+        sp.setAttribute("role", "status");
+        btn.appendChild(sp);
+        btn.appendChild(document.createTextNode("Recalculating…"));
     }
     const currency = document.getElementById("planner-currency")?.value || "USD";
     const instanceCount = parseInt(document.getElementById("confidence-instance-count")?.value, 10) || 1;
@@ -395,7 +413,7 @@ async function resetToBasicConfidence() {
         }
     } catch (err) {
         showError("planner-error", "Failed to reset confidence: " + err.message);
-        if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+        if (btn) { btn.disabled = false; btn.replaceChildren(...origNodes); }
     }
 }
 
@@ -412,10 +430,15 @@ async function fetchSpotFromPanel() {
 
     // Show spinner on button
     const btn = document.querySelector('#zoneCollapsePanel .btn-outline-primary');
-    const origHtml = btn?.innerHTML;
+    const origNodes = btn ? [...btn.childNodes].map(n => n.cloneNode(true)) : [];
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Fetching…';
+        btn.textContent = "";
+        const sp = document.createElement("span");
+        sp.className = "spinner-border spinner-border-sm me-1";
+        sp.setAttribute("role", "status");
+        btn.appendChild(sp);
+        btn.appendChild(document.createTextNode("Fetching…"));
     }
     const instanceCount = parseInt(document.getElementById("spot-panel-instances")?.value, 10) || 1;
 
@@ -451,7 +474,7 @@ async function fetchSpotFromPanel() {
         if (result.errors?.length) showError("planner-error", "Spot score error: " + result.errors.join("; "));
     } catch (err) {
         showError("planner-error", "Failed to fetch Spot Score: " + err.message);
-        if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+        if (btn) { btn.disabled = false; btn.replaceChildren(...origNodes); }
     }
 }
 
@@ -507,12 +530,25 @@ async function confirmSpotScore() {
         const resultEl = document.getElementById("spot-modal-result");
         const zones = Object.keys(zoneScores).sort();
         if (zones.length > 0) {
-            resultEl.innerHTML = '<div class="spot-modal-grid">' + zones.map(z => {
+            const grid = document.createElement("div");
+            grid.className = "spot-modal-grid";
+            zones.forEach(z => {
                 const s = zoneScores[z] || "Unknown";
-                return `<span class="spot-zone-label">Z${escapeHtml(z)}</span><span class="spot-badge spot-${s.toLowerCase()}">${escapeHtml(s)}</span>`;
-            }).join("") + '</div>';
+                const zLabel = document.createElement("span");
+                zLabel.className = "spot-zone-label";
+                zLabel.textContent = "Z" + z;
+                const badge = document.createElement("span");
+                badge.className = "spot-badge spot-" + s.toLowerCase();
+                badge.textContent = s;
+                grid.appendChild(zLabel);
+                grid.appendChild(badge);
+            });
+            resultEl.replaceChildren(grid);
         } else {
-            resultEl.innerHTML = '<span class="spot-badge spot-unknown">Unknown</span>';
+            const badge = document.createElement("span");
+            badge.className = "spot-badge spot-unknown";
+            badge.textContent = "Unknown";
+            resultEl.replaceChildren(badge);
         }
         resultEl.classList.remove("d-none");
 
@@ -573,7 +609,11 @@ async function fetchPricingDetail() {
         renderPricingDetail(data);
     } catch (err) {
         const content = document.getElementById("pricing-modal-content");
-        content.innerHTML = `<p class="text-danger small">Failed to load pricing: ${escapeHtml(err.message)}</p>`;
+        content.replaceChildren();
+        const p = document.createElement("p");
+        p.className = "text-danger small";
+        p.textContent = "Failed to load pricing: " + err.message;
+        content.appendChild(p);
         content.classList.remove("d-none");
     } finally {
         document.getElementById("pricing-modal-loading").classList.add("d-none");
@@ -653,6 +693,7 @@ function renderPricingDetail(data, openAccordionIds) {
     html += pricingHtml;
     html += '</div></div></div></div>';
 
+    // eslint-disable-next-line @microsoft/sdl/no-inner-html -- complex HTML builder; all dynamic values sanitized via escapeHtml()
     content.innerHTML = html;
     content.classList.remove("d-none");
 
@@ -979,6 +1020,7 @@ function renderRegionSummary(skus) {
     html += `</div>`;
 
     html += '</div></div>';
+    // eslint-disable-next-line @microsoft/sdl/no-inner-html -- complex HTML builder; all dynamic values sanitized via escapeHtml()
     el.innerHTML = html;
     el.classList.remove("d-none");
 
@@ -1003,7 +1045,11 @@ function renderSkuTable(skus) {
     }
 
     if (!skus || skus.length === 0) {
-        container.innerHTML = '<p class="text-body-secondary text-center py-3">No SKUs found for this region.</p>';
+        container.replaceChildren();
+        const p = document.createElement("p");
+        p.className = "text-body-secondary text-center py-3";
+        p.textContent = "No SKUs found for this region.";
+        container.appendChild(p);
         return;
     }
 
@@ -1091,6 +1137,7 @@ function renderSkuTable(skus) {
         html += "</tr>";
     });
     html += "</tbody></table>";
+    // eslint-disable-next-line @microsoft/sdl/no-inner-html -- complex HTML table builder; all dynamic values sanitized via escapeHtml()
     container.innerHTML = html;
 
     // Column type configuration for proper numeric sorting
