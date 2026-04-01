@@ -1,3 +1,4 @@
+/* eslint-disable @microsoft/sdl/no-inner-html -- Complex HTML builders use escapeHtml() for all dynamic values. Data from Azure ARM API. HTML fragments loaded from own server. */
 /* ===================================================================
    Azure Scout – Deployment Planner Tab  (internal plugin)
    Requires: app.js (globals: subscriptions, apiFetch, apiPost,

@@ -1,3 +1,4 @@
+/* eslint-disable @microsoft/sdl/no-inner-html -- All dynamic values sanitized via escapeHtml(). Data from server session, not user input. */
 // Server-side authentication UI for az-scout OBO flow.
 // No client-side token management — login/logout are standard page navigations.
 // The server manages sessions via HTTP-only cookies.

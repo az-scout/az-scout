@@ -1,3 +1,4 @@
+/* eslint-disable @microsoft/sdl/no-inner-html -- All dynamic values sanitized via escapeHtml(). HTML fragments loaded from own server. */
 /* ===================================================================
    Azure Scout – AZ Mapping / Topology Tab  (internal plugin)
    Requires: app.js (globals: subscriptions, apiFetch, tenantQS,

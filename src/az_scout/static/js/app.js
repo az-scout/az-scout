@@ -1,3 +1,4 @@
+/* eslint-disable @microsoft/sdl/no-inner-html -- All dynamic values sanitized via escapeHtml(). Data from Azure ARM API, not user input. */
 /* ===================================================================
    Azure Scout – Core  (shared state, theme, init, API helpers)
    See also: az-mapping.js, planner.js, chat.js

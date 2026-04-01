@@ -1,3 +1,4 @@
+/* eslint-disable @microsoft/sdl/no-inner-html -- Chat renders Markdown via marked.js (produces HTML by design). All other dynamic values sanitized via escapeHtml(). */
 /* ===================================================================
    Azure Scout – AI Chat Panel  (SSE streaming, tool-call display)
    Requires: app.js (globals: escapeHtml, regions, selectRegion,

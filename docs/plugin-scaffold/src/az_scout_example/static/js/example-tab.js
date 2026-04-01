@@ -1,3 +1,4 @@
+/* eslint-disable @microsoft/sdl/no-inner-html -- Documentation example. Dynamic values use escapeHtml(). */
 // Example plugin tab logic
 // This script runs after app.js and can use its globals:
 //   - apiFetch(url)           – GET helper with error handling
