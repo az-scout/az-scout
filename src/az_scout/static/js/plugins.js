@@ -80,11 +80,8 @@
 
     // ---- Card enhancement (progressive enhancement of catalog.html) ----
 
-    function escHtml(s) {
-        const d = document.createElement("div");
-        d.textContent = String(s || "");
-        return d.innerHTML;
-    }
+    // Use global escapeHtml() from app.js for HTML entity escaping.
+    const escHtml = escapeHtml;
 
     function escAttr(s) {
         return String(s || "")

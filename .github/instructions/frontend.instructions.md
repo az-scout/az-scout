@@ -44,7 +44,7 @@ Reusable renderers available to all plugins via the `window.azScout.components` 
 | `aiEnabled` | `true` if AI chat/completion is configured |
 | `renderMarkdown(md)` | Render Markdown to HTML via marked.js |
 | `tenantQS(prefix)` | Returns `?tenantId=…` or `""` |
-| `escapeHtml(str)` | Escape HTML entities |
+| `escapeHtml(str)` | OWASP Rule #1 entity encoding (`& < > " '`). **Must** be used on every value interpolated into `innerHTML` or attribute contexts. Handles both body and attribute (including `title="..."`, `data-*="..."`) safely. |
 | `subscriptions` | `[{id, name}]` array |
 | `regions` | `[{name, displayName}]` array |
 
@@ -60,3 +60,11 @@ Reusable renderers available to all plugins via the `window.azScout.components` 
 ## Context changes
 
 Plugins react to tenant/region changes via DOM events or MutationObserver on `#region-select`.
+
+## XSS prevention
+
+- **Every** value from Azure APIs or user input interpolated into `innerHTML` **must** be escaped with `escapeHtml()`.
+- This applies to both element body (`<span>${escapeHtml(name)}</span>`) and attribute contexts (`title="${escapeHtml(tip)}"`).
+- `escapeHtml()` encodes the 5 OWASP-mandated characters: `& < > " '`.
+- Do **not** define local escape helpers in plugin JS — reuse the global `escapeHtml()` from `app.js`.
+- For standalone HTML fragments loaded outside `app.js` (e.g. `catalog.html`), use a local fallback that applies the same 5 replacements.

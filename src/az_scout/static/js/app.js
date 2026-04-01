@@ -105,48 +105,6 @@ async function init() {
 }
 
 // ---------------------------------------------------------------------------
-// OBO sign-in screen (shown when OBO is enabled but user is not signed in)
-// ---------------------------------------------------------------------------
-function showSignInScreen() {
-    // Hide main content
-    const main = document.getElementById("main-content");
-    if (main) main.style.display = "none";
-
-    // Create sign-in screen
-    let screen = document.getElementById("obo-signin-screen");
-    if (!screen) {
-        screen = document.createElement("div");
-        screen.id = "obo-signin-screen";
-        screen.className = "d-flex flex-column align-items-center justify-content-center";
-        screen.style.cssText = "min-height: 60vh; text-align: center;";
-        screen.innerHTML = `
-            <div style="max-width: 420px;">
-                <img src="/static/img/favicon.svg" width="64" height="64" alt="" class="mb-3 opacity-75">
-                <h3 class="mb-2">Welcome to Azure Scout</h3>
-                <p class="text-body-secondary mb-4">
-                    Sign in with your Microsoft account to explore Azure resources
-                    using your own permissions.
-                </p>
-                <a href="/auth/login" class="btn btn-primary btn-lg">
-                    <i class="bi bi-microsoft"></i> Sign in with Microsoft
-                </a>
-                <p class="text-body-secondary small mt-3">
-                    Your Azure RBAC permissions determine what you can access.
-                </p>
-            </div>`;
-        document.querySelector(".container-fluid.mt-3")?.prepend(screen);
-    }
-}
-
-// ---------------------------------------------------------------------------
-// URL hash helper  (only stores active tab, no query params)
-// ---------------------------------------------------------------------------
-function getActiveTabFromHash() {
-    const h = window.location.hash.replace(/^#/, '');
-    return h || "topology";
-}
-
-// ---------------------------------------------------------------------------
 // API helpers
 // Cookies are sent automatically — no client-side token injection needed.
 // ---------------------------------------------------------------------------
@@ -223,10 +181,20 @@ function tenantQS(prefix) {
     return (prefix || "&") + "tenantId=" + encodeURIComponent(tid);
 }
 
+/**
+ * Escape a value for safe interpolation into innerHTML / attribute contexts.
+ * Covers OWASP XSS Prevention Rule #1: encode & < > " '
+ * @param {*} str - value to escape (null/undefined become "").
+ * @returns {string}
+ */
 function escapeHtml(str) {
-    const div = document.createElement("div");
-    div.textContent = str;
-    return div.innerHTML;
+    if (str == null) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 }
 
 /**

@@ -73,12 +73,16 @@
   const filterInput = document.getElementById("catalog-filter");
   let plugins = [];
 
-  function esc(s) {
-    if (!s) return "";
-    const d = document.createElement("div");
-    d.textContent = s;
-    return d.innerHTML.replace(/'/g, "&#39;");
-  }
+  // Use global escapeHtml() from app.js when available, standalone fallback otherwise.
+  const esc = typeof escapeHtml === "function" ? escapeHtml : function(s) {
+    if (s == null) return "";
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  };
 
   function renderCard(p) {
     const isWip = (p.tags || []).some(function(t) { return t.toLowerCase() === "wip"; });
