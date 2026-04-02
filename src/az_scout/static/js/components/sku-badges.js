@@ -7,7 +7,7 @@
 window.azScout = window.azScout || {};
 window.azScout.components = window.azScout.components || {};
 
-(function (C) {
+((C) => {
     const SCORE_LABELS = [[80, "High"], [60, "Medium"], [40, "Low"], [0, "Very Low"]];
 
     /**
@@ -15,7 +15,7 @@ window.azScout.components = window.azScout.components || {};
      * @param {number} score - Score 0–100.
      * @returns {string} "High", "Medium", "Low", or "Very Low".
      */
-    C.scoreLabel = function (score) {
+    C.scoreLabel = (score) => {
         for (const [th, lbl] of SCORE_LABELS) {
             if (score >= th) return lbl;
         }
@@ -29,7 +29,7 @@ window.azScout.components = window.azScout.components || {};
      * @param {boolean} [opts.tooltip=true] - Include Bootstrap tooltip.
      * @returns {string} Badge HTML or "—" if no score.
      */
-    C.renderConfidenceBadge = function (conf, opts) {
+    C.renderConfidenceBadge = (conf, opts) => {
         if (!conf || conf.score == null) return "\u2014";
         const o = opts || {};
         const lbl = (conf.label || "").toLowerCase().replace(/\s+/g, "-");
@@ -53,7 +53,7 @@ window.azScout.components = window.azScout.components || {};
      * @param {object} zoneScores - {zone: scoreLabel} map.
      * @returns {string} HTML badges string.
      */
-    C.renderSpotBadges = function (zoneScores) {
+    C.renderSpotBadges = (zoneScores) => {
         if (!zoneScores || !Object.keys(zoneScores).length) return "";
         return Object.entries(zoneScores)
             .sort(([a], [b]) => a.localeCompare(b))
@@ -71,7 +71,7 @@ window.azScout.components = window.azScout.components || {};
      * @param {string[]} allZones - All logical zones to display.
      * @returns {string} HTML string with zone indicator icons.
      */
-    C.renderZoneBadges = function (zones, restrictions, allZones) {
+    C.renderZoneBadges = (zones, restrictions, allZones) => {
         const zoneList = allZones || ["1", "2", "3"];
         return zoneList.map(lz => {
             const restricted = (restrictions || []).includes(lz);
@@ -89,7 +89,7 @@ window.azScout.components = window.azScout.components || {};
      * @param {number} [opts.vcpus] - vCPUs per instance for deployable count.
      * @returns {string} HTML string with progress bar.
      */
-    C.renderQuotaBar = function (quota, opts) {
+    C.renderQuotaBar = (quota, opts) => {
         if (!quota || quota.limit == null) return "\u2014";
         const o = opts || {};
         const pct = quota.limit > 0 ? Math.round((quota.used / quota.limit) * 100) : 0;
@@ -113,7 +113,7 @@ window.azScout.components = window.azScout.components || {};
      * @param {string} label - "High", "Medium", "Low", etc.
      * @returns {string} Badge HTML.
      */
-    C.renderSpotBadge = function (label) {
+    C.renderSpotBadge = (label) => {
         const key = (label || "").toLowerCase();
         const friendly = { high: "High", medium: "Medium", low: "Low", restrictedskunotavailable: "Restricted", unknown: "Unknown", datanotfoundorstale: "No data" };
         const display = friendly[key] || label;

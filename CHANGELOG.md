@@ -7,6 +7,18 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
 ## Unreleased
 
+### Added
+
+- **`showSkuDetailModal()`** – New shared JS component in `sku-detail-modal.js` that provides a full-flow SKU detail modal for all plugins. Shows loading state, fetches from `/api/sku-detail`, renders confidence breakdown (with signal tooltips, knockout reasons, disclaimers), VM profile, zone availability, quota, pricing (with currency selector), and supports plugin-specific extra sections and recalculate callbacks. Modal DOM is created lazily — no `index.html` changes needed.
+- **`parse_sku_series()`** – New utility in `azure_api.skus` that extracts the VM series prefix from ARM SKU names (e.g. `Standard_D2s_v5` → `D`, `Standard_NC24ads_A100_v4` → `NC`). Exported in `azure_api` public API.
+- **Expanded SKU capabilities** – `get_skus()` now extracts 15 capabilities (up from 4): added `AcceleratedNetworkingEnabled`, `EphemeralOSDiskSupported`, `HyperVGenerations`, `GPUs`, `CachedDiskBytes`, `MaxResourceVolumeMB`, `LowPriorityCapable`, `TrustedLaunchDisabled`, `EncryptionAtHostSupported`, `CpuArchitectureType`, `UltraSSDAvailable`. Enables workload eligibility filtering by plugins.
+
+### Changed
+
+- **Planner modal migration** – Planner now uses shared `showSkuDetailModal()` instead of its own custom modal. Removes ~200 lines of duplicate rendering code. Planner-specific features (recalculate with Spot, instance count) are injected via `onRecalculate` callback.
+- **`renderConfidenceBreakdown()`** – Upgraded shared component with signal description tooltips, knockout reasons alert, disclaimers with "Learn more" link, and dynamic title (blocked/basic+spot/basic).
+- **PLUGIN_API_VERSION** bumped to `1.3` (additive: new exports, expanded capabilities).
+
 ### Fixed
 
 - **XSS: `escapeHtml()` attribute-context escape** – Replaced the `div.textContent/innerHTML` approach with OWASP Rule #1 character replacement (`& < > " '`), fixing unescaped `"` and `'` in attribute contexts (e.g. `title="..."`, `data-*="..."`). Removed duplicate escape helpers from `plugins.js` and `catalog.html` in favour of the shared global.
@@ -15,6 +27,7 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 ### Removed
 
 - **Dead code** – Removed unused `showSignInScreen()` and `getActiveTabFromHash()` from `app.js`.
+- **Planner duplicate code** – Removed local `renderConfidenceBreakdown()`, `renderZoneAvailability()`, `renderPricingDetail()`, `fetchPricingDetail()`, `refreshPricingModal()` from planner.js (now handled by shared modal).
 
 ## [2026.4.0] - 2026-04-01
 

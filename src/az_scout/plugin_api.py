@@ -214,6 +214,13 @@ class SkuCapabilities(TypedDict, total=False):
     EphemeralOSDiskSupported: str
     GPUs: str
     HyperVGenerations: str
+    CachedDiskBytes: str
+    MaxResourceVolumeMB: str
+    LowPriorityCapable: str
+    TrustedLaunchDisabled: str
+    EncryptionAtHostSupported: str
+    CpuArchitectureType: str
+    UltraSSDAvailable: str
 
 
 class SkuQuota(TypedDict, total=False):

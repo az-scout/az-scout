@@ -65,3 +65,13 @@ if is_ai_enabled():
 
 `apiFetch`, `apiPost`, `aiComplete`, `aiEnabled`, `renderMarkdown`,
 `tenantQS`, `escapeHtml`, `subscriptions`, `regions`
+
+## Create a new plugin
+
+If you need to create a new plugin, use the following command to scaffold a new plugin directory with template files:
+
+```bash
+az-scout create-plugin
+```
+
+Follow the prompts to enter the plugin name and description. This will create a new directory with a basic plugin structure and you can start implementing your plugin logic there.

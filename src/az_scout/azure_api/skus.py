@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from typing import Any
 
@@ -21,6 +22,52 @@ _sku_profile_cache: dict[str, tuple[float, dict[str, Any] | None]] = {}
 # SKU list cache – keyed by (subscription, region, resource_type, tenant)
 _SKU_LIST_CACHE_TTL = 600  # 10 minutes
 _sku_list_cache: dict[str, tuple[float, list[dict[str, Any]]]] = {}
+
+
+# Capabilities extracted into every SKU dict returned by get_skus().
+# Kept intentionally lean – only fields that plugins commonly filter on.
+_LISTING_CAPABILITIES = frozenset(
+    {
+        "vCPUs",
+        "MemoryGB",
+        "MaxDataDiskCount",
+        "PremiumIO",
+        "AcceleratedNetworkingEnabled",
+        "EphemeralOSDiskSupported",
+        "HyperVGenerations",
+        "GPUs",
+        "CachedDiskBytes",
+        "MaxResourceVolumeMB",
+        "LowPriorityCapable",
+        "TrustedLaunchDisabled",
+        "EncryptionAtHostSupported",
+        "CpuArchitectureType",
+        "UltraSSDAvailable",
+    }
+)
+
+# Regex to extract the VM series prefix from an ARM SKU name.
+# Examples:  Standard_D2s_v5 → D,  Standard_NC24ads_A100_v4 → NC,  Standard_B2s → B
+_SERIES_RE = re.compile(r"^(?:Standard|Basic)_([A-Z]+)", re.IGNORECASE)
+
+
+def parse_sku_series(sku_name: str) -> str:
+    """Extract the VM series prefix from an ARM SKU name.
+
+    Returns the uppercase series letter(s) (e.g. ``"D"``, ``"NC"``, ``"B"``,
+    ``"FX"``).  Returns ``""`` if the name doesn't match the expected pattern.
+
+    Examples::
+
+        >>> parse_sku_series("Standard_D2s_v5")
+        'D'
+        >>> parse_sku_series("Standard_NC24ads_A100_v4")
+        'NC'
+        >>> parse_sku_series("Standard_B2s")
+        'B'
+    """
+    m = _SERIES_RE.match(sku_name)
+    return m.group(1).upper() if m else ""
 
 
 def _sku_name_matches(filter_val: str, sku_name: str) -> bool:
@@ -146,7 +193,7 @@ def get_skus(
         for cap in sku.get("capabilities", []):
             cap_name = cap.get("name", "")
             cap_value = cap.get("value", "")
-            if cap_name in ("vCPUs", "MemoryGB", "MaxDataDiskCount", "PremiumIO"):
+            if cap_name in _LISTING_CAPABILITIES:
                 capabilities[cap_name] = cap_value
 
         # vCPU / memory range filters

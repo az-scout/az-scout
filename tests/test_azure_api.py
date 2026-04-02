@@ -14,6 +14,7 @@ from az_scout.azure_api._arm import (
     arm_post,
     get_headers,
 )
+from az_scout.azure_api.skus import parse_sku_series
 
 
 class TestSkuNameMatches:
@@ -52,6 +53,34 @@ class TestSkuNameMatches:
     def test_no_false_positive_partial_overlap(self) -> None:
         # "d48-v3" should not match "standard_d4s_v3" (d4 != d48)
         assert not _sku_name_matches("d48-v3", "standard_d4s_v3")
+
+
+class TestParseSkuSeries:
+    """Tests for parse_sku_series()."""
+
+    def test_d_series(self) -> None:
+        assert parse_sku_series("Standard_D2s_v5") == "D"
+
+    def test_nc_series(self) -> None:
+        assert parse_sku_series("Standard_NC24ads_A100_v4") == "NC"
+
+    def test_b_series(self) -> None:
+        assert parse_sku_series("Standard_B2s") == "B"
+
+    def test_fx_series(self) -> None:
+        assert parse_sku_series("Standard_FX48mds_v2") == "FX"
+
+    def test_e_series(self) -> None:
+        assert parse_sku_series("Standard_E4s_v5") == "E"
+
+    def test_basic_a_series(self) -> None:
+        assert parse_sku_series("Basic_A0") == "A"
+
+    def test_empty_string(self) -> None:
+        assert parse_sku_series("") == ""
+
+    def test_no_prefix(self) -> None:
+        assert parse_sku_series("SomeRandomName") == ""
 
 
 # ---------------------------------------------------------------------------

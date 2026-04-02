@@ -262,4 +262,4 @@ Every score result includes these disclaimers:
 ## References
 
 [protean]: https://www.usenix.org/conference/osdi20/presentation/hadary "Protean: VM Allocation Service at Scale (OSDI 2020)"
-[kerveros]: https://www.usenix.org/conference/osdi23/presentation/li-jiaqi "Kerveros: Efficient and Scalable Cloud Admission Control (OSDI 2023)"
+[kerveros]: https://www.usenix.org/conference/osdi23/presentation/sajal "Kerveros: Efficient and Scalable Cloud Admission Control (OSDI 2023)"

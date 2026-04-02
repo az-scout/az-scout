@@ -104,6 +104,7 @@ from az_scout.azure_api.skus import (  # noqa: F401
     get_mappings,
     get_sku_profile,
     get_skus,
+    parse_sku_series,
 )
 
 # -- Spot --------------------------------------------------------------------
@@ -189,7 +190,7 @@ async def enrich_skus(
 # ---------------------------------------------------------------------------
 # API version – bump major for breaking changes, minor for additions.
 # ---------------------------------------------------------------------------
-PLUGIN_API_VERSION = "1.2"
+PLUGIN_API_VERSION = "1.3"
 """Semantic version of the plugin-facing API surface (``__all__``)."""
 
 # ---------------------------------------------------------------------------
@@ -224,6 +225,7 @@ __all__ = [
     # SKU catalogue
     "get_skus",
     "get_sku_profile",
+    "parse_sku_series",
     # Enrichment (mutate SKU dicts in-place)
     "enrich_skus_with_prices",
     "enrich_skus_with_quotas",
