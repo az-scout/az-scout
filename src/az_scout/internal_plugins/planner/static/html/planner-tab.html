@@ -94,21 +94,4 @@
     </div>
 </div>
 
-<!-- ===== Pricing Detail Modal ===== -->
-<div class="modal fade" id="pricingModal" tabindex="-1" aria-labelledby="pricingModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-fullscreen-md-down modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="pricingModalLabel">SKU Detail — <span id="pricing-modal-sku"></span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="pricing-modal-loading" class="text-center d-none">
-                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                    <span class="ms-2 small">Fetching prices…</span>
-                </div>
-                <div id="pricing-modal-content" class="d-none"></div>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- SKU Detail Modal: now uses shared showSkuDetailModal() from sku-detail-modal.js -->

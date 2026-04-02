@@ -19,7 +19,7 @@ Reusable renderers available to all plugins via the `window.azScout.components` 
 | Module | Functions |
 |---|---|
 | `sku-badges.js` | `scoreLabel()`, `renderConfidenceBadge()`, `renderSpotBadges()`, `renderSpotBadge()`, `renderZoneBadges()`, `renderQuotaBar()` |
-| `sku-detail-modal.js` | `renderVmProfile()`, `renderZoneAvailability()`, `renderQuotaPanel()`, `renderConfidenceBreakdown()`, `renderPricingPanel()` |
+| `sku-detail-modal.js` | `renderVmProfile()`, `renderZoneAvailability()`, `renderQuotaPanel()`, `renderConfidenceBreakdown()`, `renderPricingPanel()`, `showSkuDetailModal()` |
 | `data-filters.js` | `parseNumericFilter()`, `matchNumericFilter()`, `buildColumnFilters()`, `applyColumnFilters()` |
 
 ## CSS

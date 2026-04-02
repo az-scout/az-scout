@@ -42,7 +42,7 @@
             "Loading…</div>";
 
         // Set up the callback BEFORE injecting catalog.html so the inline script can call it
-        window.onCatalogRendered = function(plugins) {
+        window.onCatalogRendered = (plugins) => {
             catalogPlugins = plugins;
             // Now that cards are rendered, fetch instance data and enhance
             loadPlugins();
@@ -156,8 +156,8 @@
                 const ver = escHtml(record.ref || '');
                 let btnsHtml = '';
 
-                if ((info && info.update_available) || record.update_available === true) {
-                    const latest = escHtml((info && info.latest_ref) || record.latest_ref || '');
+                if ((info?.update_available) || record.update_available === true) {
+                    const latest = escHtml((info?.latest_ref) || record.latest_ref || '');
                     const label = latest ? ver + ' \u2192 ' + latest : 'Update';
                     btnsHtml += '<button class="btn btn-outline-info btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Update plugin to latest version" onclick="pmUpdate(\'' + escAttr(name) + '\')"><i class="bi bi-cloud-download me-1"></i>' + label + '</button>';
                     anyUpdate = true;
@@ -166,7 +166,7 @@
 
                 actionsEl.innerHTML = btnsHtml;
                 injectVersion(col, ver);
-            } else if (isInstalled && loadedPlugin && loadedPlugin.in_packages_dir) {
+            } else if (isInstalled && loadedPlugin?.in_packages_dir) {
                 // Installed as a dependency via PM — manageable
                 actionsEl.innerHTML =
                     '<button class="btn btn-outline-danger btn-sm" onclick="pmUninstall(\'' + escAttr(name) + '\')"><i class="bi bi-trash me-1"></i>Uninstall</button>';
@@ -197,14 +197,14 @@
             const record = installedByDist[distName];
             grid.insertAdjacentHTML("beforeend", buildExtraCard(p, record));
 
-            if (record && ((updateInfo[distName] || {}).update_available || record.update_available === true)) {
+            if (record && (updateInfo[distName]?.update_available || record.update_available === true)) {
                 anyUpdate = true;
             }
         }
 
         // 2b. Single card for all built-in plugins
         if (builtins.length > 0) {
-            const items = builtins.map(function(p) {
+            const items = builtins.map((p) => {
                 const label = p.display_name || p.name;
                 return '<li><strong>' + escHtml(label) + '</strong>' +
                     (p.description ? ' — ' + escHtml(p.description) : '') + '</li>';
@@ -228,7 +228,7 @@
             if (seenDists.has(r.distribution_name)) continue;
             seenDists.add(r.distribution_name);
             grid.insertAdjacentHTML("beforeend", buildNotLoadedCard(r));
-            if ((updateInfo[r.distribution_name] || {}).update_available || r.update_available === true) {
+            if (updateInfo[r.distribution_name]?.update_available || r.update_available === true) {
                 anyUpdate = true;
             }
         }
@@ -279,8 +279,8 @@
             const info = updateInfo[record.distribution_name];
             const ver = escHtml(record.ref || '');
             let btnsHtml = '';
-            if ((info && info.update_available) || record.update_available === true) {
-                const latest = escHtml((info && info.latest_ref) || record.latest_ref || '');
+            if ((info?.update_available) || record.update_available === true) {
+                const latest = escHtml((info?.latest_ref) || record.latest_ref || '');
                 const label = latest ? ver + ' \u2192 ' + latest : 'Update';
                 btnsHtml += '<button class="btn btn-outline-info btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Update plugin to latest version" onclick="pmUpdate(\'' + escAttr(record.distribution_name) + '\')"><i class="bi bi-cloud-download me-1"></i>' + label + '</button>';
             }
@@ -317,8 +317,8 @@
     /** Build a card for a plugin in installed.json but not loaded. */
     function buildNotLoadedCard(r) {
         let btnsLine = "";
-        if ((updateInfo[r.distribution_name] || {}).update_available || r.update_available === true) {
-            const latest = escHtml((updateInfo[r.distribution_name] || {}).latest_ref || r.latest_ref || '');
+        if (updateInfo[r.distribution_name]?.update_available || r.update_available === true) {
+            const latest = escHtml(updateInfo[r.distribution_name]?.latest_ref || r.latest_ref || '');
             const ver = escHtml(r.ref || '');
             const label = latest ? ver + ' \u2192 ' + latest : 'Update';
             btnsLine += '<button class="btn btn-outline-info btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Update plugin to latest version" onclick="pmUpdate(\'' + escAttr(r.distribution_name) + '\')"><i class="bi bi-cloud-download me-1"></i>' + label + '</button> ';

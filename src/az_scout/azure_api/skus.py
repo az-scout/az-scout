@@ -38,6 +38,11 @@ _LISTING_CAPABILITIES = frozenset(
         "GPUs",
         "CachedDiskBytes",
         "MaxResourceVolumeMB",
+        "LowPriorityCapable",
+        "TrustedLaunchDisabled",
+        "EncryptionAtHostSupported",
+        "CpuArchitectureType",
+        "UltraSSDAvailable",
     }
 )
 

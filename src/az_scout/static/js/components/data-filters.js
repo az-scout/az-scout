@@ -10,14 +10,14 @@
 window.azScout = window.azScout || {};
 window.azScout.components = window.azScout.components || {};
 
-(function (C) {
+((C) => {
     /**
      * Parse a numeric filter expression.
      * Supported syntax: >5, >=5, <32, <=32, =8, 5-16 (range), plain number (exact).
      * @param {string} val - Raw filter string.
      * @returns {object|null} Parsed filter or null.
      */
-    C.parseNumericFilter = function (val) {
+    C.parseNumericFilter = (val) => {
         const s = (val || "").trim();
         let m;
         // Range: 4-16, 4..16, 4–16
@@ -37,7 +37,7 @@ window.azScout.components = window.azScout.components || {};
      * @param {object} filter - Parsed filter from parseNumericFilter.
      * @returns {boolean}
      */
-    C.matchNumericFilter = function (cellVal, filter) {
+    C.matchNumericFilter = (cellVal, filter) => {
         const n = parseFloat(cellVal);
         if (Number.isNaN(n)) return false;
         switch (filter.op) {
@@ -59,7 +59,7 @@ window.azScout.components = window.azScout.components || {};
      * @param {Set<number>} [numericCols] - Column indices that are numeric.
      * @returns {HTMLElement} The filter row element.
      */
-    C.buildColumnFilters = function (tableEl, filterableCols, numericCols) {
+    C.buildColumnFilters = (tableEl, filterableCols, numericCols) => {
         const thead = tableEl.querySelector("thead");
         if (!thead) return null;
 
@@ -67,13 +67,13 @@ window.azScout.components = window.azScout.components || {};
         const filterRow = document.createElement("tr");
         filterRow.className = "datatable-filter-row";
 
-        headerCells.forEach(function (_, idx) {
+        headerCells.forEach((_, idx) => {
             const td = document.createElement("td");
             if (filterableCols.includes(idx)) {
                 const input = document.createElement("input");
                 input.type = "search";
                 input.className = "datatable-column-filter";
-                const isNumeric = numericCols && numericCols.has(idx);
+                const isNumeric = numericCols?.has(idx);
                 input.placeholder = isNumeric ? ">5, <32, 4-16\u2026" : "Filter\u2026";
                 if (isNumeric) input.dataset.numeric = "1";
                 input.dataset.col = String(idx);
@@ -85,9 +85,9 @@ window.azScout.components = window.azScout.components || {};
 
         // Debounced column filtering via row visibility
         let timeout;
-        filterRow.addEventListener("input", function () {
+        filterRow.addEventListener("input", () => {
             clearTimeout(timeout);
-            timeout = setTimeout(function () { C.applyColumnFilters(tableEl, filterRow); }, 200);
+            timeout = setTimeout(() => { C.applyColumnFilters(tableEl, filterRow); }, 200);
         });
 
         return filterRow;
@@ -98,10 +98,10 @@ window.azScout.components = window.azScout.components || {};
      * @param {HTMLElement} tableEl - The table element.
      * @param {HTMLElement} filterRow - The filter row with inputs.
      */
-    C.applyColumnFilters = function (tableEl, filterRow) {
+    C.applyColumnFilters = (tableEl, filterRow) => {
         const inputs = filterRow.querySelectorAll("input[data-col]");
         const filters = [];
-        inputs.forEach(function (inp) {
+        inputs.forEach((inp) => {
             const val = inp.value.trim();
             if (!val) return;
             const col = parseInt(inp.dataset.col, 10);
@@ -114,10 +114,10 @@ window.azScout.components = window.azScout.components || {};
         });
 
         const rows = tableEl.querySelectorAll("tbody tr");
-        rows.forEach(function (row) {
+        rows.forEach((row) => {
             if (filters.length === 0) { row.style.display = ""; return; }
             const cells = row.querySelectorAll("td");
-            const match = filters.every(function (f) {
+            const match = filters.every((f) => {
                 const cell = cells[f.col];
                 if (!cell) return false;
                 if (f.numeric) return C.matchNumericFilter(cell.textContent, f.numeric);
