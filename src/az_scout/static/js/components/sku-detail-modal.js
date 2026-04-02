@@ -394,6 +394,7 @@ window.azScout.components = window.azScout.components || {};
      * @param {object} [opts.enrichedSku] - Enriched SKU from plugin cache (quota, confidence, spot_zones).
      * @param {object} [opts.physicalZoneMap] - {logicalZone: physicalName} for zone tooltips.
      * @param {function} [opts.extraSections] - function(data, enrichedSku) → HTML.
+     * @param {function} [opts.prependSections] - function(data, enrichedSku) → HTML inserted before confidence.
      * @param {function} [opts.onRecalculate] - function(skuName, instanceCount, includeSpot) → Promise<{confidence}>.
      *     If provided, replaces the default recalculation (re-fetch /api/sku-detail).
      *     Must return an object with at least {confidence} to merge into the display.
@@ -458,6 +459,12 @@ window.azScout.components = window.azScout.components || {};
     function _renderSharedDetail(data, _skuName, opts, openAccordionIds) {
         var enriched = opts.enrichedSku || {};
         var html = "";
+
+        // 0. Plugin-specific prepend sections (before confidence)
+        if (typeof opts.prependSections === "function") {
+            html += opts.prependSections(data, enriched);
+            html += '<hr class="my-3 opacity-25">';
+        }
 
         // 1. Confidence breakdown
         var conf = enriched.confidence || data.confidence;

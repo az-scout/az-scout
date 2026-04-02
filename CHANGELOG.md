@@ -9,7 +9,7 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
 ### Added
 
-- **`showSkuDetailModal()`** – New shared JS component in `sku-detail-modal.js` that provides a full-flow SKU detail modal for all plugins. Shows loading state, fetches from `/api/sku-detail`, renders confidence breakdown (with signal tooltips, knockout reasons, disclaimers), VM profile, zone availability, quota, pricing (with currency selector), and supports plugin-specific extra sections and recalculate callbacks. Modal DOM is created lazily — no `index.html` changes needed.
+- **`showSkuDetailModal()`** – New shared JS component in `sku-detail-modal.js` that provides a full-flow SKU detail modal for all plugins. Shows loading state, fetches from `/api/sku-detail`, renders confidence breakdown (with signal tooltips, knockout reasons, disclaimers), VM profile, zone availability, quota, pricing (with currency selector), and supports plugin-specific extra sections (`extraSections`, `prependSections`) and recalculate callbacks. Modal DOM is created lazily — no `index.html` changes needed.
 - **`parse_sku_series()`** – New utility in `azure_api.skus` that extracts the VM series prefix from ARM SKU names (e.g. `Standard_D2s_v5` → `D`, `Standard_NC24ads_A100_v4` → `NC`). Exported in `azure_api` public API.
 - **Expanded SKU capabilities** – `get_skus()` now extracts 15 capabilities (up from 4): added `AcceleratedNetworkingEnabled`, `EphemeralOSDiskSupported`, `HyperVGenerations`, `GPUs`, `CachedDiskBytes`, `MaxResourceVolumeMB`, `LowPriorityCapable`, `TrustedLaunchDisabled`, `EncryptionAtHostSupported`, `CpuArchitectureType`, `UltraSSDAvailable`. Enables workload eligibility filtering by plugins.
 
