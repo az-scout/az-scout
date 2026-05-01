@@ -7,6 +7,8 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
 ## Unreleased
 
+## [2026.5.0] - 2026-05-01
+
 ### Added
 
 - **AGENTS.md** – Top-level pointer for non-Copilot AI agents (Claude, Codex, Aider, Cursor) summarising where the rules live, the quality gate, branch protection, and hard constraints.
