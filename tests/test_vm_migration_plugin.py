@@ -226,7 +226,7 @@ class TestGetMigrationVmsRoute:
 
     def test_arm_authorization_error_skips_subscription(self, client) -> None:
         """403 errors on a subscription should not crash the whole request."""
-        from az_scout.azure_api._arm import ArmAuthorizationError
+        from az_scout.azure_api import ArmAuthorizationError
 
         with (
             patch(

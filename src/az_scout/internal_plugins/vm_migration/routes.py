@@ -11,7 +11,7 @@ from fastapi import APIRouter, Query
 from starlette.responses import JSONResponse
 
 from az_scout import azure_api
-from az_scout.azure_api._arm import ArmAuthorizationError, ArmRequestError
+from az_scout.azure_api import ArmAuthorizationError, ArmRequestError
 
 logger = logging.getLogger(__name__)
 
