@@ -18,8 +18,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Plugin: vm-migration"])
 
 # VM SKU families v2–v5 are migration candidates.
-# Matches Standard_D4s_v3, Standard_E8ds_v4, Standard_B2ms_v2, etc.
-_V2_TO_V5_RE = re.compile(r"_v[2-5]([a-z]*)?$", re.IGNORECASE)
+# Matches Standard_D4s_v3, Standard_E8ds_v4, Standard_B2ms_v2,
+# and Promo variants like Standard_D4_v3_Promo.
+_V2_TO_V5_RE = re.compile(r"_v[2-5][a-z]*(_promo)?$", re.IGNORECASE)
 
 # Marker strings in image SKU names that indicate Generation 2
 _GEN2_IMAGE_MARKERS = ("gen2", "-g2", "2gen")

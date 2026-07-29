@@ -72,6 +72,9 @@ class TestIsMigrationCandidate:
             ("Standard_D8s_v7", False),
             ("Standard_A2_v2", True),
             ("Standard_D16_v1", False),  # v1 is not in scope
+            ("Standard_D4_v3_Promo", True),  # Promo suffix after version
+            ("Standard_A1_v2_Promo", True),  # Promo on v2 family
+            ("Standard_D4s_v6_Promo", False),  # v6 Promo is not in scope
         ],
     )
     def test_candidate_detection(self, sku: str, expected: bool) -> None:
