@@ -1,0 +1,127 @@
+<div class="row g-3">
+    <!-- Left sidebar: subscription selector + filters -->
+    <div class="col-md-3 col-xl-2">
+        <div class="vmm-sidebar">
+            <label class="form-label form-label-sm mb-1">
+                <i class="bi bi-collection"></i> Subscriptions
+            </label>
+            <div class="input-group input-group-sm mb-1">
+                <input type="search" class="form-control" id="vmm-sub-filter"
+                       placeholder="Filter…" autocomplete="off" spellcheck="false">
+                <button type="button" class="btn btn-outline-secondary" onclick="vmmSelectAllVisible()" title="Select all visible">
+                    <i class="bi bi-check-all"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="vmmDeselectAll()" title="Clear all">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div id="vmm-sub-list" data-testid="vmm-sub-list" class="subscription-checklist"></div>
+            <div class="d-flex justify-content-between align-items-center mt-2">
+                <small class="text-body-secondary" id="vmm-sub-count">0 selected</small>
+                <button type="button" class="btn btn-primary btn-sm" id="vmm-load-btn"
+                        data-testid="vmm-load-btn" onclick="vmmLoad()" disabled>
+                    <i class="bi bi-arrow-repeat"></i> Load
+                </button>
+            </div>
+
+            <!-- Column filters -->
+            <hr class="my-3">
+            <label class="form-label form-label-sm mb-1">
+                <i class="bi bi-funnel"></i> Filters
+            </label>
+            <div class="mb-2">
+                <input type="search" class="form-control form-control-sm" id="vmm-filter-name"
+                       placeholder="VM name…" autocomplete="off" oninput="vmmApplyFilters()">
+            </div>
+            <div class="mb-2">
+                <select class="form-select form-select-sm" id="vmm-filter-region" onchange="vmmApplyFilters()">
+                    <option value="">All regions</option>
+                </select>
+            </div>
+            <div class="mb-2">
+                <select class="form-select form-select-sm" id="vmm-filter-os" onchange="vmmApplyFilters()">
+                    <option value="">All OS types</option>
+                    <option value="Windows">Windows</option>
+                    <option value="Linux">Linux</option>
+                </select>
+            </div>
+            <div class="mb-2">
+                <select class="form-select form-select-sm" id="vmm-filter-gen" onchange="vmmApplyFilters()">
+                    <option value="">All generations</option>
+                    <option value="V1">V1</option>
+                    <option value="V2">V2</option>
+                </select>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary w-100 mt-1" onclick="vmmResetFilters()">
+                <i class="bi bi-x-circle"></i> Reset filters
+            </button>
+        </div>
+    </div>
+
+    <!-- Right content -->
+    <div class="col-md-9 col-xl-10">
+        <!-- Error -->
+        <div id="vmm-error" data-testid="vmm-error" class="alert alert-danger alert-sm d-none" role="alert"></div>
+
+        <!-- Empty state -->
+        <div id="vmm-empty" data-testid="vmm-empty" class="text-center text-body-secondary py-5">
+            <i class="bi bi-arrow-up-circle fs-1 d-block mb-2"></i>
+            <p>Select subscriptions and click <strong>Load</strong> to find VMs that need to migrate to the v6/v7 series.</p>
+            <p class="small">Scans for VMs using v2–v5 SKU families.</p>
+        </div>
+
+        <!-- Loading -->
+        <div id="vmm-loading" data-testid="vmm-loading" class="text-center py-5 d-none">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-body-secondary">Scanning VMs across subscriptions…</p>
+        </div>
+
+        <!-- No results (after load) -->
+        <div id="vmm-no-results" data-testid="vmm-no-results" class="text-center text-body-secondary py-5 d-none">
+            <i class="bi bi-check-circle fs-1 d-block mb-2 text-success"></i>
+            <p>No v2–v5 VMs found in the selected subscriptions.</p>
+            <p class="small">All VMs are already on v6/v7 series or newer.</p>
+        </div>
+
+        <!-- Results -->
+        <div id="vmm-results" data-testid="vmm-results" class="d-none">
+            <!-- Summary cards -->
+            <div id="vmm-stats" class="row g-2 mb-3"></div>
+
+            <!-- Table card -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="bi bi-table"></i> Migration Candidates
+                        <span id="vmm-table-count" class="badge bg-secondary ms-2">0</span>
+                    </span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="vmmExportCSV()" title="Export as CSV">
+                        <i class="bi bi-download"></i> CSV
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover vmm-table mb-0" id="vmm-table">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th onclick="vmmSort('name')" class="sortable">VM Name <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('resource_group')" class="sortable">Resource Group <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('subscription_name')" class="sortable">Subscription <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('region')" class="sortable">Region <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('sku')" class="sortable">SKU <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('generation')" class="sortable">Generation <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('os_type')" class="sortable">OS <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('image_publisher')" class="sortable">Image Publisher <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('disk_controller_type')" class="sortable">Disk Controller <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th>Zones</th>
+                                    <th>Effort</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vmm-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

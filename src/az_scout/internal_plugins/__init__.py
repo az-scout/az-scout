@@ -33,4 +33,13 @@ def discover_internal_plugins() -> list[AzScoutPlugin]:
         logger.info("Loaded internal plugin: %s v%s", planner_plugin.name, planner_plugin.version)
     except Exception:
         logger.exception("Failed to load internal plugin: planner")
+    try:
+        from az_scout.internal_plugins.vm_migration import plugin as vm_migration_plugin
+
+        plugins.append(vm_migration_plugin)
+        logger.info(
+            "Loaded internal plugin: %s v%s", vm_migration_plugin.name, vm_migration_plugin.version
+        )
+    except Exception:
+        logger.exception("Failed to load internal plugin: vm-migration")
     return plugins

@@ -1,0 +1,64 @@
+/* ===================================================================
+   Azure Scout – VM v6/v7 Migration Plugin Styles
+   =================================================================== */
+
+/* ---- Sidebar ---- */
+.vmm-sidebar {
+    position: sticky;
+    top: 1rem;
+}
+
+/* ---- Subscription checklist (reuse topology pattern) ---- */
+#vmm-sub-list.subscription-checklist {
+    max-height: 40vh;
+    overflow-y: auto;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    padding: 0.35rem 0.5rem;
+}
+
+#vmm-sub-list label {
+    display: block;
+    padding: 0.15rem 0;
+    cursor: pointer;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---- Stat cards ---- */
+.vmm-stat-card {
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg);
+}
+
+/* ---- Migration table ---- */
+.vmm-table thead th {
+    font-size: 0.78rem;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.vmm-table thead th.sortable {
+    cursor: pointer;
+}
+
+.vmm-table thead th.sortable:hover {
+    background-color: var(--bs-secondary-bg);
+}
+
+.vmm-table .sort-icon {
+    opacity: 0.4;
+    font-size: 0.7rem;
+}
+
+.vmm-table tbody td {
+    font-size: 0.83rem;
+    vertical-align: middle;
+}
+
+/* ---- Dark theme overrides ---- */
+[data-bs-theme="dark"] .vmm-stat-card {
+    background: var(--bs-tertiary-bg);
+}
