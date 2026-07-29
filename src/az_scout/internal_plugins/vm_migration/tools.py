@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 from az_scout import azure_api
-from az_scout.internal_plugins.vm_migration.routes import (
-    _fetch_vms_for_subscription,
-    _is_migration_candidate,
-)
+from az_scout.internal_plugins.vm_migration.routes import _fetch_vms_for_subscription
 
 
 def list_migration_candidate_vms(
@@ -35,7 +32,3 @@ def list_migration_candidate_vms(
         sub_name = known_subs.get(sub_id, sub_id)
         results.extend(_fetch_vms_for_subscription(sub_id, sub_name, tenant_id))
     return results
-
-
-# Re-export for use in unit tests
-__all__ = ["list_migration_candidate_vms", "_is_migration_candidate"]
