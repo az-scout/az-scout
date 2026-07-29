@@ -104,15 +104,15 @@
                         <table class="table table-sm table-hover vmm-table mb-0" id="vmm-table">
                             <thead class="table-dark">
                                 <tr>
-                                    <th onclick="vmmSort('name')" class="sortable">VM Name <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                                    <th onclick="vmmSort('resource_group')" class="sortable">Resource Group <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                                    <th onclick="vmmSort('subscription_name')" class="sortable">Subscription <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                                    <th onclick="vmmSort('region')" class="sortable">Region <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                                    <th onclick="vmmSort('sku')" class="sortable">SKU <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                                    <th onclick="vmmSort('generation')" class="sortable">Generation <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                                    <th onclick="vmmSort('os_type')" class="sortable">OS <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                                    <th onclick="vmmSort('image_publisher')" class="sortable">Image Publisher <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                                    <th onclick="vmmSort('disk_controller_type')" class="sortable">Disk Controller <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('name')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('name');}" class="sortable" tabindex="0">VM Name <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('resource_group')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('resource_group');}" class="sortable" tabindex="0">Resource Group <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('subscription_name')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('subscription_name');}" class="sortable" tabindex="0">Subscription <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('region')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('region');}" class="sortable" tabindex="0">Region <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('sku')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('sku');}" class="sortable" tabindex="0">SKU <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('generation')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('generation');}" class="sortable" tabindex="0">Generation <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('os_type')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('os_type');}" class="sortable" tabindex="0">OS <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('image_publisher')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('image_publisher');}" class="sortable" tabindex="0">Image Publisher <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('disk_controller_type')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('disk_controller_type');}" class="sortable" tabindex="0">Disk Controller <i class="bi bi-arrow-down-up sort-icon"></i></th>
                                     <th>Zones</th>
                                     <th>Effort</th>
                                 </tr>
