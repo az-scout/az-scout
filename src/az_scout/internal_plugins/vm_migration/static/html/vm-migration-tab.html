@@ -60,14 +60,20 @@
 
     <!-- Right content -->
     <div class="col-md-9 col-xl-10">
+        <!-- Scope definition -->
+        <div class="alert alert-info py-2 mb-3 small" role="note">
+            <strong>Scope definition:</strong> This list is a legacy SKU VM inventory for v6/v7 migration
+            planning scope. It is not a direct execution checklist for in-place migration.
+        </div>
+
         <!-- Error -->
         <div id="vmm-error" data-testid="vmm-error" class="alert alert-danger alert-sm d-none" role="alert"></div>
 
         <!-- Empty state -->
         <div id="vmm-empty" data-testid="vmm-empty" class="text-center text-body-secondary py-5">
             <i class="bi bi-arrow-up-circle fs-1 d-block mb-2"></i>
-            <p>Select subscriptions and click <strong>Load</strong> to find VMs that need to migrate to the v6/v7 series.</p>
-            <p class="small">Scans for VMs using v2–v5 SKU families.</p>
+            <p>Select subscriptions and click <strong>Load</strong> to discover legacy SKU VMs in migration scope.</p>
+            <p class="small">This inventory targets VMs currently on v2-v5 SKU families.</p>
         </div>
 
         <!-- Loading -->
@@ -79,8 +85,8 @@
         <!-- No results (after load) -->
         <div id="vmm-no-results" data-testid="vmm-no-results" class="text-center text-body-secondary py-5 d-none">
             <i class="bi bi-check-circle fs-1 d-block mb-2 text-success"></i>
-            <p>No v2–v5 VMs found in the selected subscriptions.</p>
-            <p class="small">All VMs are already on v6/v7 series or newer.</p>
+            <p>No legacy SKU (v2-v5) VMs found in the selected subscriptions.</p>
+            <p class="small">No VM is currently in this migration planning scope.</p>
         </div>
 
         <!-- Results -->
@@ -92,8 +98,11 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span>
-                        <i class="bi bi-table"></i> Migration Candidates
+                        <i class="bi bi-table"></i> Legacy SKU VM Inventory
                         <span id="vmm-table-count" class="badge bg-secondary ms-2">0</span>
+                        <span class="ms-2 text-body-secondary small">
+                            Click a row to open VM planning recommendations
+                        </span>
                     </span>
                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="vmmExportCSV()" title="Export as CSV">
                         <i class="bi bi-download"></i> CSV
@@ -109,18 +118,39 @@
                                     <th onclick="vmmSort('subscription_name')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('subscription_name');}" class="sortable" tabindex="0">Subscription <i class="bi bi-arrow-down-up sort-icon"></i></th>
                                     <th onclick="vmmSort('region')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('region');}" class="sortable" tabindex="0">Region <i class="bi bi-arrow-down-up sort-icon"></i></th>
                                     <th onclick="vmmSort('sku')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('sku');}" class="sortable" tabindex="0">SKU <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                                    <th onclick="vmmSort('generation')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('generation');}" class="sortable" tabindex="0">Generation <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                                    <th onclick="vmmSort('generation')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('generation');}" class="sortable" tabindex="0">Hyper-V Generation <i class="bi bi-arrow-down-up sort-icon"></i></th>
                                     <th onclick="vmmSort('os_type')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('os_type');}" class="sortable" tabindex="0">OS <i class="bi bi-arrow-down-up sort-icon"></i></th>
                                     <th onclick="vmmSort('image_publisher')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('image_publisher');}" class="sortable" tabindex="0">Image Publisher <i class="bi bi-arrow-down-up sort-icon"></i></th>
                                     <th onclick="vmmSort('disk_controller_type')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vmmSort('disk_controller_type');}" class="sortable" tabindex="0">Disk Controller <i class="bi bi-arrow-down-up sort-icon"></i></th>
                                     <th>Zones</th>
-                                    <th>Effort</th>
+                                    <th>Migration Readiness (inferred)</th>
                                 </tr>
                             </thead>
                             <tbody id="vmm-tbody"></tbody>
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- VM Detail Modal (VM Migration plugin specific) -->
+<div class="modal fade" id="vmmDetailModal" tabindex="-1" aria-labelledby="vmmDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-fullscreen-md-down modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="vmmDetailModalLabel">
+                    VM Migration Scope Detail - <span id="vmm-detail-name"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="vmm-detail-loading" class="text-center d-none">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    <span class="ms-2 small">Building recommendations...</span>
+                </div>
+                <div id="vmm-detail-content" class="d-none"></div>
             </div>
         </div>
     </div>

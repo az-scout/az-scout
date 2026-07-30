@@ -1,7 +1,7 @@
-"""VM v6/v7 Migration – internal plugin.
+"""VM v6/v7 SKU Migration Scope – internal plugin.
 
-Provides a dashboard of VMs that are candidates for migration from v2–v5
-series to the v6/v7 Azure VM series, with enriched metadata per VM.
+Provides an inventory of legacy SKU VMs (v2-v5) that are in scope for
+v6/v7 SKU-family migration planning, with enriched metadata per VM.
 """
 
 from __future__ import annotations
@@ -19,13 +19,15 @@ _STATIC_DIR = Path(__file__).parent / "static"
 
 
 class VmMigrationPlugin:
-    """Internal plugin: VM v6/v7 Migration dashboard."""
+    """Internal plugin: VM v6/v7 SKU Migration Scope dashboard."""
 
     name = "vm-migration"
-    display_name = "VM Migration"
+    display_name = "SKU Migration Scope"
     version = __version__
     internal = True
-    description = "Dashboard of VMs impacted by the Azure v2–v5 → v6/v7 series migration."
+    description = (
+        "Inventory of legacy SKU VMs (v2-v5) in scope for v6/v7 SKU-family migration planning."
+    )
 
     def get_router(self) -> APIRouter | None:
         from az_scout.internal_plugins.vm_migration.routes import router
@@ -44,7 +46,7 @@ class VmMigrationPlugin:
         return [
             TabDefinition(
                 id="vm-migration",
-                label="VM Migration",
+                label="SKU Migration Scope",
                 icon="bi bi-arrow-up-circle",
                 js_entry="js/vm-migration-tab.js",
                 css_entry="css/vm-migration-tab.css",

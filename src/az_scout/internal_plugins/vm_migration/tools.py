@@ -21,14 +21,15 @@ def list_migration_candidate_vms(
         Field(description="Optional Azure AD tenant ID to scope the request."),
     ] = None,
 ) -> str:
-    """List Azure VMs that are candidates for migration to the v6/v7 series.
+    """List legacy-SKU Azure VMs in scope for v6/v7 migration planning.
 
-    Returns all VMs using v2-v5 generation SKUs (e.g. Standard_D4s_v3,
-    Standard_E8ds_v5) across the given subscriptions, with fields:
+    Returns inventory records for VMs using v2-v5 SKU families
+    (e.g. Standard_D4s_v3, Standard_E8ds_v5) across the given subscriptions,
+    with fields:
     name, resource_group, subscription_id, subscription_name, region, sku,
     generation, os_type, image_publisher, disk_controller_type, zones.
 
-    Use this tool to assess migration scope before planning a v6/v7 upgrade.
+    Use this tool for migration-scope discovery before pilot and wave planning.
 
     Generation values:
     - "V2" / "V1": confirmed from security profile or image reference

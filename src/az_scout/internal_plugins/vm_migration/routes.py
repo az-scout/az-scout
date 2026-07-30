@@ -129,14 +129,14 @@ def _fetch_vms_for_subscription(
 
 @router.get(
     "/vms",
-    summary="List VMs impacted by the v6/v7 migration",
+    summary="List legacy-SKU VMs in migration scope for v6/v7 planning",
     responses={400: {"model": dict}},
 )
 async def get_migration_vms(
     subscriptions: str | None = Query(None, description="Comma-separated subscription IDs."),
     tenantId: str | None = Query(None, description="Optional tenant ID."),  # noqa: N803
 ) -> JSONResponse:
-    """Return all VMs using v2–v5 SKUs, enriched with migration-relevant metadata."""
+    """Return legacy-SKU VM inventory (v2-v5) for v6/v7 migration planning scope."""
     if not subscriptions:
         return JSONResponse(
             {"error": "'subscriptions' query parameter is required"},
