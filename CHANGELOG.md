@@ -7,6 +7,8 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
 ## Unreleased
 
+## [2026.8.0] - 2026-08-03
+
 ### Fixed
 
 - **`ModuleNotFoundError: No module named 'mcp.server.fastmcp'` on fresh installs** – the MCP Python SDK 2.0.0 removed the `mcp.server.fastmcp` module entirely (FastMCP is no longer bundled). Because the dependency was declared as `mcp[cli]>=1.9` with no upper bound, any fresh install (`uvx az-scout`, `pip install az-scout`, container rebuild) resolved to `mcp` 2.0.0 and crashed on import. The requirement was temporarily pinned to `mcp[cli]>=1.9,<2`; that cap is now lifted and the server runs on the 2.x API (see *Changed* below).
