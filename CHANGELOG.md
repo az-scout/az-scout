@@ -7,6 +7,8 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
 ## Unreleased
 
+## [2026.8.1] - 2026-08-05
+
 ### Fixed
 
 - **`Install error: cannot access local variable 'InvalidSpecifier' where it is not associated with a value`** – installing any plugin from the Plugin Manager failed on isolated installs (`uv tool install az-scout`, `uvx az-scout`, `pipx`). The plugin core-version compatibility check imported `packaging` *inside* a `try` block but referenced `InvalidSpecifier` in the matching `except (InvalidSpecifier, Exception)` clause. `packaging` was never a declared runtime dependency — it only reached dev environments transitively via `mkdocs`/`pytest` — so on a clean install the import raised `ImportError`, evaluating the `except` tuple raised `UnboundLocalError`, and the error surfaced in the UI instead of the real cause. `packaging>=24.0` is now a declared runtime dependency, and the check was restructured so exception names are only referenced after their import succeeds. When `packaging` is genuinely unavailable the check now logs a warning and allows the install rather than crashing, and malformed version specifiers no longer block installs.
