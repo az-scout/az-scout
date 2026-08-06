@@ -51,7 +51,7 @@ def _ensure_plugin_packages_on_path() -> None:
         return
     from az_scout.plugin_manager._installer import _prune_core_from_packages
 
-    _prune_core_from_packages()
+    _prune_core_from_packages(_PACKAGES_DIR)
     pkg_str = str(_PACKAGES_DIR)
     if pkg_str not in sys.path:
         sys.path.insert(0, pkg_str)

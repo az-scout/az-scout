@@ -107,13 +107,22 @@ def _prune_core_from_packages(packages_dir: Path | None = None) -> None:
     pkg = packages_dir or _storage._PACKAGES_DIR
     if not pkg.exists():
         return
-    core_dir = pkg / "az_scout"
-    if core_dir.is_dir():
-        logger.debug("Pruning stray az-scout core package from packages dir: %s", core_dir)
-        shutil.rmtree(core_dir, ignore_errors=True)
-    for info in pkg.glob("az_scout-*.dist-info"):
-        logger.debug("Pruning stray az-scout core dist-info from packages dir: %s", info)
-        shutil.rmtree(info, ignore_errors=True)
+    targets = [pkg / "az_scout"] if (pkg / "az_scout").is_dir() else []
+    targets.extend(pkg.glob("az_scout-*.dist-info"))
+    for target in targets:
+        logger.debug("Pruning stray az-scout core from packages dir: %s", target)
+        try:
+            shutil.rmtree(target)
+        except OSError:
+            logger.warning(
+                "Error while pruning stray az-scout core from packages dir: %s",
+                target,
+                exc_info=True,
+            )
+        if target.exists():
+            # The whole point of pruning is to stop a stray core from shadowing the
+            # running one, so a silent failure here would defeat it. Surface it.
+            logger.warning("Stray az-scout core still present after prune attempt: %s", target)
 
 
 def _core_is_local_install() -> bool:
@@ -136,8 +145,7 @@ def _core_is_local_install() -> bool:
         found = False
         for dist in distributions():
             try:
-                meta = dist.metadata
-                name = meta["Name"] if meta else None
+                name = dist.name
                 if not name or name.lower().replace("_", "-") != "az-scout":
                     continue
                 found = True
