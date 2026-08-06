@@ -992,6 +992,46 @@ class TestRunPip:
 
         assert pkg_dir.exists()
 
+    def test_prunes_core_after_successful_install(self, tmp_path: Path) -> None:
+        """A stray core copy dragged in by --target is pruned after a good install."""
+        pkg_dir = tmp_path / "plugin-packages"
+        pkg_dir.mkdir()
+        core = pkg_dir / "az_scout"
+        core.mkdir()
+        (core / "__init__.py").write_text("")
+        info = pkg_dir / "az_scout-2026.8.0.dist-info"
+        info.mkdir()
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+
+        with (
+            patch.object(_pm_storage, "_PACKAGES_DIR", pkg_dir),
+            patch("az_scout.plugin_manager._installer._find_uv", return_value="/usr/bin/uv"),
+            patch("az_scout.plugin_manager._installer.subprocess.run", return_value=mock_proc),
+        ):
+            plugin_manager.run_pip(["pip", "install", "some-pkg"])
+
+        assert not core.exists()
+        assert not info.exists()
+
+    def test_does_not_prune_after_failed_install(self, tmp_path: Path) -> None:
+        """A failed install leaves the packages dir untouched."""
+        pkg_dir = tmp_path / "plugin-packages"
+        pkg_dir.mkdir()
+        core = pkg_dir / "az_scout"
+        core.mkdir()
+        mock_proc = MagicMock()
+        mock_proc.returncode = 1
+
+        with (
+            patch.object(_pm_storage, "_PACKAGES_DIR", pkg_dir),
+            patch("az_scout.plugin_manager._installer._find_uv", return_value="/usr/bin/uv"),
+            patch("az_scout.plugin_manager._installer.subprocess.run", return_value=mock_proc),
+        ):
+            plugin_manager.run_pip(["pip", "install", "some-pkg"])
+
+        assert core.exists()
+
 
 # ---------------------------------------------------------------------------
 # Reconciliation tests
@@ -2184,7 +2224,13 @@ class TestCoreConstraintFile:
     def test_writes_constraint(self) -> None:
         from az_scout.plugin_manager._installer import _write_core_constraint
 
-        with patch("az_scout.__version__", "2026.3.8"):
+        with (
+            patch("az_scout.__version__", "2026.3.8"),
+            patch(
+                "az_scout.plugin_manager._installer._core_is_local_install",
+                return_value=False,
+            ),
+        ):
             path = _write_core_constraint()
         assert path is not None
         content = Path(path).read_text()
@@ -2197,3 +2243,55 @@ class TestCoreConstraintFile:
         with patch("az_scout.__version__", "2026.3.9.dev4"):
             path = _write_core_constraint()
         assert path is None
+
+    def test_skips_editable_install(self) -> None:
+        from az_scout.plugin_manager._installer import _write_core_constraint
+
+        with (
+            patch("az_scout.__version__", "2026.3.8"),
+            patch(
+                "az_scout.plugin_manager._installer._core_is_local_install",
+                return_value=True,
+            ),
+        ):
+            path = _write_core_constraint()
+        assert path is None
+
+
+class TestPruneCoreFromPackages:
+    """Tests for _prune_core_from_packages."""
+
+    def test_removes_core_package_and_dist_info(self, tmp_path: Path) -> None:
+        from az_scout.plugin_manager._installer import _prune_core_from_packages
+
+        core = tmp_path / "az_scout"
+        core.mkdir()
+        (core / "__init__.py").write_text("")
+        info = tmp_path / "az_scout-2026.8.0.dist-info"
+        info.mkdir()
+        (info / "METADATA").write_text("Name: az-scout\n")
+
+        _prune_core_from_packages(tmp_path)
+
+        assert not core.exists()
+        assert not info.exists()
+
+    def test_preserves_plugin_packages(self, tmp_path: Path) -> None:
+        from az_scout.plugin_manager._installer import _prune_core_from_packages
+
+        plugin_pkg = tmp_path / "az_scout_plugin_odcr_coverage"
+        plugin_pkg.mkdir()
+        (plugin_pkg / "__init__.py").write_text("")
+        plugin_info = tmp_path / "az_scout_plugin_odcr_coverage-2026.6.0.dist-info"
+        plugin_info.mkdir()
+        (plugin_info / "METADATA").write_text("Name: az-scout-plugin-odcr-coverage\n")
+
+        _prune_core_from_packages(tmp_path)
+
+        assert plugin_pkg.exists()
+        assert plugin_info.exists()
+
+    def test_no_op_when_dir_missing(self, tmp_path: Path) -> None:
+        from az_scout.plugin_manager._installer import _prune_core_from_packages
+
+        _prune_core_from_packages(tmp_path / "does-not-exist")

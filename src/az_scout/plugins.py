@@ -39,9 +39,19 @@ _plugin_route_prefixes: set[str] = set()  # tracked prefixes for route cleanup
 
 
 def _ensure_plugin_packages_on_path() -> None:
-    """Add ``plugin-packages`` directory to ``sys.path`` if it exists."""
+    """Add ``plugin-packages`` directory to ``sys.path`` if it exists.
+
+    Before adding the directory, any stray ``az-scout`` core copy is pruned from
+    it. A ``--target`` plugin install re-resolves in isolation and can drag a full
+    copy of the core into the packages directory; because that directory is
+    prepended to ``sys.path``, such a copy would shadow the running core. The core
+    is always importable from the active environment, so it must never live here.
+    """
     if not _PACKAGES_DIR.exists():
         return
+    from az_scout.plugin_manager._installer import _prune_core_from_packages
+
+    _prune_core_from_packages()
     pkg_str = str(_PACKAGES_DIR)
     if pkg_str not in sys.path:
         sys.path.insert(0, pkg_str)

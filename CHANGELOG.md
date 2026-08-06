@@ -7,6 +7,11 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
 ## Unreleased
 
+### Fixed
+
+- **Plugin install failed with `No solution found` on editable / local core installs** – the Plugin Manager pins `az-scout==<running version>` in a pip constraint file to stop a mismatched core from being installed into the plugin packages directory. When the core itself is an editable or local `file:` install (dev worktrees, `pip install .`), that exact version exists only on disk and not on any package index, so uv could not satisfy the `==` pin and *every* plugin install failed. The constraint is now skipped when the core is detected as an editable/local install (via PEP 610 `direct_url.json`).
+- **A duplicate `az-scout` core could be installed into the plugin packages directory and shadow the running core** – a `--target` plugin install re-resolves in isolation and drags a full copy of the `az-scout` core (and its dependency tree) into the packages directory, which is prepended to `sys.path` at startup. A stray core copy there would shadow the running core, producing wrong version/metadata resolution (and reintroducing the constraint failure above on subsequent installs). The core is now pruned from the packages directory after every successful install and again before the directory is added to `sys.path` at startup, so a plugin's copy of the core can never persist or shadow the real one. Plugin packages (`az_scout_*`) are left untouched.
+
 ## [2026.8.1] - 2026-08-05
 
 ### Fixed
