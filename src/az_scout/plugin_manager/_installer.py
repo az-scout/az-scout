@@ -151,6 +151,11 @@ def _core_is_local_install() -> bool:
                 if isinstance(url, str) and url.startswith("file:"):
                     return True
             except Exception:
+                logger.debug(
+                    "Skipping unreadable distribution during local core check: %r",
+                    dist,
+                    exc_info=True,
+                )
                 continue
         # If no az-scout distribution metadata is discoverable at all, err on the
         # side of skipping the constraint rather than emitting an unsatisfiable pin.
