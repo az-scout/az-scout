@@ -7,6 +7,8 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
 ## Unreleased
 
+## [2026.8.2] - 2026-08-11
+
 ### Changed
 
 - **Vendored all frontend CDN assets into the app bundle (core app works offline/air-gapped)** – Bootstrap, Bootstrap Icons (+ fonts), simple-datatables, highlight.js (+ both themes and the JSON language), marked, and D3 are now served from `src/az_scout/static/vendor/` via the existing `/static` mount instead of `cdn.jsdelivr.net` / `d3js.org`. The core UI now works fully offline/air-gapped and identically across local dev, SaaS publishing (the files ship in the wheel), and customer self-hosting — with no per-mode configuration. A new dependency-free maintenance script, `tools/vendor_assets.py`, (re)downloads the pinned versions when they are bumped (`python tools/vendor_assets.py`, `--check` to verify presence); the committed files remain the source of truth, so no build tooling is added to the normal dev/install/publish flows.
