@@ -1,9 +1,10 @@
 # Vendored third-party assets
 
-az-scout ships **no external CDN at runtime** and enforces a strict `'self'`-only
-Content-Security-Policy. Plugin static files are served **same-origin**, so anything committed in
-this package is allowed — but linking to a CDN is **blocked by the CSP** and breaks offline /
-air-gapped self-hosting.
+This directory is an **optional** home for any third-party JS/CSS/font your plugin ships itself.
+az-scout serves plugin static files **same-origin** and does **not** enforce a
+Content-Security-Policy, so vendored assets work out of the box — and loading from a CDN also works
+if you prefer. Vendoring is **recommended** because same-origin files keep your plugin working
+offline / air-gapped and make deployments reproducible.
 
 ## Do you actually need to vendor anything?
 
@@ -25,11 +26,11 @@ If your plugin needs an *additional* third-party JS/CSS/font, drop the pinned fi
 directory and reference them from your own static prefix:
 
 ```html
-<!-- vendored, same-origin — allowed by the CSP -->
+<!-- vendored, same-origin — works offline / air-gapped (recommended) -->
 <link rel="stylesheet" href="/plugins/example/static/vendor/chart/chart.min.css">
 <script src="/plugins/example/static/vendor/chart/chart.min.js"></script>
 
-<!-- external CDN — blocked by the CSP, breaks air-gapped self-hosting; do NOT do this -->
+<!-- external CDN — also works (no CSP), but adds a runtime network dependency -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 ```
 

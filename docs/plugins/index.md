@@ -247,28 +247,28 @@ async function initTab() {
 }
 ```
 
-### Vendoring third-party assets (no external CDN)
+### Vendoring third-party assets (recommended, not enforced)
 
-az-scout ships **no external CDN at runtime** and enforces a strict `'self'`-only
+az-scout ships all of its own third-party assets **vendored locally** and does **not** enforce a
 Content-Security-Policy. Plugin static assets are served **same-origin**
-(`/plugins/{name}/static/…`), so anything you ship in your package is allowed — but linking to a
-CDN is **blocked by the CSP** and breaks offline / air-gapped self-hosting.
+(`/plugins/{name}/static/…`), so anything you ship in your package works out of the box — and,
+because there is no CSP, linking to a CDN also works if you choose to.
 
-This is a *recommended* convention, not a breaking change: plugins that reuse the core's libraries
-need no changes.
+Vendoring is a *recommended* convention (best for offline / air-gapped self-hosting and
+reproducibility), not a requirement: plugins that reuse the core's libraries need no changes.
 
 1. **Reuse the core's libraries first.** Bootstrap (+ Bootstrap Icons), D3, marked, highlight.js and
    simple-datatables are already loaded on the page or exposed as globals (`renderMarkdown`,
    `escapeHtml`, `d3`, …). Don't re-ship or re-link them.
-2. **Vendor extra dependencies into your package.** For any *additional* third-party JS/CSS/font,
-   commit the file under `static/vendor/` and reference it from your own static prefix:
+2. **Prefer vendoring extra dependencies into your package.** For any *additional* third-party
+   JS/CSS/font, commit the file under `static/vendor/` and reference it from your own static prefix:
 
     ```html
-    <!-- ✅ vendored, same-origin — allowed -->
+    <!-- ✅ vendored, same-origin — works offline / air-gapped -->
     <link rel="stylesheet" href="/plugins/{name}/static/vendor/chart/chart.min.css">
     <script src="/plugins/{name}/static/vendor/chart/chart.min.js"></script>
 
-    <!-- ❌ external CDN — blocked by CSP, breaks air-gapped self-hosting -->
+    <!-- ⚠️ external CDN — allowed (no CSP), but adds a runtime network dependency -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     ```
 

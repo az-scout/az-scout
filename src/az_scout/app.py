@@ -148,54 +148,6 @@ async def _plugin_error_handler(_request: Request, exc: PluginError) -> JSONResp
 
 
 # ---------------------------------------------------------------------------
-# Content-Security-Policy
-# ---------------------------------------------------------------------------
-
-_CSP_POLICY = "; ".join(
-    [
-        "default-src 'self'",
-        "script-src 'self' 'unsafe-inline'",
-        "style-src 'self' 'unsafe-inline'",
-        "font-src 'self'",
-        "img-src 'self' data: https://github.com https://*.githubusercontent.com https://img.shields.io",
-        "connect-src 'self' https://plugin-catalog.az-scout.com",
-        "frame-ancestors 'none'",
-    ]
-)
-
-
-class _CSPMiddleware:
-    """Add Content-Security-Policy header to all HTML responses.
-
-    Uses raw ASGI instead of BaseHTTPMiddleware to preserve contextvars
-    propagation through the middleware chain.
-    """
-
-    def __init__(self, app: Any) -> None:
-        self.app = app
-
-    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
-        if scope["type"] != "http":
-            await self.app(scope, receive, send)
-            return
-
-        async def send_with_csp(message: Any) -> None:
-            if message["type"] == "http.response.start":
-                headers = dict(message.get("headers", []))
-                ct = headers.get(b"content-type", b"").decode("latin-1", errors="replace")
-                if "text/html" in ct:
-                    h = list(message.get("headers", []))
-                    h.append((b"content-security-policy", _CSP_POLICY.encode("latin-1")))
-                    message = {**message, "headers": h}
-            await send(message)
-
-        await self.app(scope, receive, send_with_csp)
-
-
-app.add_middleware(_CSPMiddleware)
-
-
-# ---------------------------------------------------------------------------
 # Auth context middleware – populates contextvars for the current request
 # so _get_headers() can read user_token without explicit params.
 #

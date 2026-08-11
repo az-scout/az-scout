@@ -67,20 +67,20 @@ if is_ai_enabled():
 `apiFetch`, `apiPost`, `aiComplete`, `aiEnabled`, `renderMarkdown`,
 `tenantQS`, `escapeHtml`, `subscriptions`, `regions`
 
-## Third-party / vendored assets (no external CDN)
+## Third-party / vendored assets (vendoring recommended)
 
-The core ships **no external CDN at runtime** and enforces a strict `'self'`-only
-Content-Security-Policy (`script-src`/`style-src`/`font-src`/`connect-src`). This is a
-**recommended behaviour change** for plugins, not a breaking one — plugins that reuse the
-core's already-vendored libraries need no changes.
+The core ships all its own third-party assets **vendored locally** and does **not** enforce a
+Content-Security-Policy. Vendoring is **recommended** for plugins (best for offline/air-gapped
+self-hosting and reproducibility), but it is not required — plugins that reuse the core's
+already-vendored libraries need no changes, and plugins **may** load assets from a CDN if they choose.
 
 1. **Reuse what the core already vendors.** Bootstrap (+ Bootstrap Icons), D3, marked,
    highlight.js and simple-datatables are already loaded on the page or exposed as JS globals
    (`renderMarkdown`, `escapeHtml`, `d3`, …). Do **not** re-ship or re-link them.
-2. **Vendor anything extra into your own package.** If your plugin needs an *additional*
+2. **Prefer vendoring anything extra into your own package.** If your plugin needs an *additional*
    third-party JS/CSS/font, commit it under `static/vendor/` and reference it via
-   `/plugins/{name}/static/vendor/…`. Do **not** link to a CDN — the core CSP will block it at
-   runtime, and it breaks offline/air-gapped self-hosting.
+   `/plugins/{name}/static/vendor/…`. This keeps the plugin working offline / air-gapped; loading
+   from a CDN also works but adds a runtime network dependency.
 
 Your `static/` dir already ships in your wheel, so vendored files work identically across local
 dev, SaaS publishing, and customer self-hosting — with no per-mode configuration.
@@ -90,11 +90,11 @@ sync script with pinned versions to (re)download vendored files on a version bum
 files remain the source of truth, so **no build tooling / npm / bundler** is introduced.
 
 ```html
-<!-- ✅ vendored, served same-origin — allowed by CSP -->
+<!-- ✅ vendored, served same-origin — works offline / air-gapped -->
 <link rel="stylesheet" href="/plugins/my-plugin/static/vendor/chart/chart.min.css">
 <script src="/plugins/my-plugin/static/vendor/chart/chart.min.js"></script>
 
-<!-- ❌ external CDN — blocked by the core CSP, breaks air-gapped self-hosting -->
+<!-- ⚠️ external CDN — allowed (no CSP), but adds a runtime network dependency -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 ```
 

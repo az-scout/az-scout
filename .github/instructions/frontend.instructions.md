@@ -34,17 +34,18 @@ Reusable renderers available to all plugins via the `window.azScout.components` 
 - Static assets referenced via `url_for('static', ...)`.
 - Plugin tabs/actions injected dynamically from `get_plugin_metadata()`.
 
-## No external CDN — vendor assets locally
+## Vendoring assets locally (recommended, not enforced)
 
-- All third-party JS/CSS/fonts are **vendored** under `static/vendor/` and served via the `/static`
-  mount. Do **not** add `<script>`/`<link>` tags pointing at a CDN — the Content-Security-Policy in
-  `app.py` is `'self'`-only (`script-src`/`style-src`/`font-src`/`connect-src`) and blocks them.
+- Core third-party JS/CSS/fonts are **vendored** under `static/vendor/` and served via the `/static`
+  mount. Vendoring is recommended (best for offline/air-gapped/self-hosting and reproducibility), but
+  the app does **not** enforce a Content-Security-Policy, so `<script>`/`<link>` tags pointing at a CDN
+  will work if you choose to use one.
 - Reuse the already-vendored libs (Bootstrap, Bootstrap Icons, D3, marked, highlight.js,
   simple-datatables) rather than adding another copy.
 - To add or bump a vendored library, edit the pinned manifest in `tools/vendor_assets.py` and run
   `python tools/vendor_assets.py`; commit the downloaded files (they are the source of truth — no
   build tooling). Keep font files beside their CSS if the CSS uses relative `url("fonts/...")`.
-- Plugins follow the same rule and vendor their own extras — see `plugin-author.instructions.md`.
+- Plugins may follow the same practice and vendor their own extras — see `plugin-author.instructions.md`.
 
 ## Shared globals (available to plugins)
 
