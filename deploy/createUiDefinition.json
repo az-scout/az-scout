@@ -330,6 +330,64 @@
             "defaultValue": true
           }
         ]
+      },
+      {
+        "name": "aiChat",
+        "label": "AI Chat",
+        "elements": [
+          {
+            "name": "aiChatInfo",
+            "type": "Microsoft.Common.InfoBox",
+            "options": {
+              "text": "Optional AI chat assistant backed by Azure OpenAI / Foundry. No API key is stored: the app's managed identity authenticates with Microsoft Entra ID (works with disableLocalAuth = true). The identity needs the 'Cognitive Services OpenAI User' role on the AI resource — set the resource ID below to assign it automatically.",
+              "style": "Info"
+            }
+          },
+          {
+            "name": "enableAiChat",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Enable AI chat (keyless Azure OpenAI)"
+          },
+          {
+            "name": "openAiEndpoint",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Azure OpenAI endpoint",
+            "defaultValue": "",
+            "toolTip": "Endpoint of the Azure OpenAI / AI Services account, e.g. https://<account>.services.ai.azure.com or https://<account>.openai.azure.com.",
+            "visible": "[steps('aiChat').enableAiChat]",
+            "constraints": {
+              "required": "[steps('aiChat').enableAiChat]",
+              "regex": "^https://[^\\s/]+/?$",
+              "validationMessage": "Must be an https:// endpoint URL."
+            }
+          },
+          {
+            "name": "openAiDeployment",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Model deployment name",
+            "defaultValue": "",
+            "toolTip": "Name of the chat model deployment (e.g. gpt-4o).",
+            "visible": "[steps('aiChat').enableAiChat]",
+            "constraints": {
+              "required": "[steps('aiChat').enableAiChat]",
+              "regex": "^[A-Za-z0-9._-]{1,64}$",
+              "validationMessage": "Letters, numbers, '.', '_' and '-' only."
+            }
+          },
+          {
+            "name": "openAiResourceId",
+            "type": "Microsoft.Common.TextBox",
+            "label": "AI resource ID (optional)",
+            "defaultValue": "",
+            "toolTip": "Resource ID of the Azure OpenAI / AI Services account. When set, the managed identity is granted 'Cognitive Services OpenAI User' on it. Leave empty to assign the role yourself.",
+            "visible": "[steps('aiChat').enableAiChat]",
+            "constraints": {
+              "required": false,
+              "regex": "^(/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\\.CognitiveServices/accounts/[^/]+)?$",
+              "validationMessage": "Must be a Microsoft.CognitiveServices/accounts resource ID, or empty."
+            }
+          }
+        ]
       }
     ],
     "outputs": {
@@ -354,7 +412,10 @@
       "enableObo": "[steps('authentication').enableObo]",
       "oboClientId": "[if(steps('authentication').enableObo, steps('authentication').oboClientId, '')]",
       "oboClientSecret": "[if(steps('authentication').enableObo, steps('authentication').oboClientSecret, '')]",
-      "oboTenantId": "[if(and(steps('authentication').enableObo, not(empty(steps('authentication').oboTenantId))), steps('authentication').oboTenantId, '')]"
+      "oboTenantId": "[if(and(steps('authentication').enableObo, not(empty(steps('authentication').oboTenantId))), steps('authentication').oboTenantId, '')]",
+      "openAiEndpoint": "[if(steps('aiChat').enableAiChat, steps('aiChat').openAiEndpoint, '')]",
+      "openAiDeployment": "[if(steps('aiChat').enableAiChat, steps('aiChat').openAiDeployment, '')]",
+      "openAiResourceId": "[if(steps('aiChat').enableAiChat, steps('aiChat').openAiResourceId, '')]"
     }
   }
 }

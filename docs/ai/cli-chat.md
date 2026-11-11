@@ -23,7 +23,7 @@ az-scout chat "What SKUs are available in francecentral with at least 8 vCPUs?"
 | `-v, --verbose` | Enable verbose logging |
 
 !!! note "Requirements"
-    The CLI chat requires Azure OpenAI credentials — set `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, and `AZURE_OPENAI_DEPLOYMENT` environment variables.
+    The CLI chat requires Azure OpenAI — set `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_DEPLOYMENT`. `AZURE_OPENAI_API_KEY` is optional: without it, your `az login` identity is used (Microsoft Entra ID), which needs the **Cognitive Services OpenAI User** role on the AI resource. See [AI Chat Assistant](../features.md#ai-chat-assistant).
 
 ---
 

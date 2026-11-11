@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "13139490619029811158"
+      "templateHash": "9086884746841550027"
     }
   },
   "parameters": {
@@ -173,10 +173,40 @@
       "metadata": {
         "description": "OBO App Registration home tenant ID. Defaults to the deployment tenant."
       }
+    },
+    "openAiEndpoint": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Azure OpenAI / Foundry endpoint for the AI chat (e.g. \"https://<account>.services.ai.azure.com\"). Leave empty to disable the AI chat. No API key is configured: the managed identity authenticates with Microsoft Entra ID."
+      }
+    },
+    "openAiDeployment": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Azure OpenAI model deployment name used by the AI chat (e.g. \"gpt-4o\"). Required together with openAiEndpoint."
+      }
+    },
+    "openAiResourceId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Resource ID of the Azure OpenAI / AI Services account. When set, the managed identity is granted the role in openAiRoleDefinitionId on it. Leave empty to assign the role yourself."
+      }
+    },
+    "openAiRoleDefinitionId": {
+      "type": "string",
+      "defaultValue": "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd",
+      "metadata": {
+        "description": "Role definition ID granted on openAiResourceId. Defaults to \"Cognitive Services OpenAI User\"; override with the \"Azure AI User\" role ID for Foundry projects if required."
+      }
     }
   },
   "variables": {
-    "readerRoleId": "acdd72a7-3385-48ef-bd42-f606fba81ae7"
+    "readerRoleId": "acdd72a7-3385-48ef-bd42-f606fba81ae7",
+    "enableAiChat": "[and(not(empty(parameters('openAiEndpoint'))), not(empty(parameters('openAiDeployment'))))]",
+    "openAiResourceIdParts": "[split(if(empty(parameters('openAiResourceId')), format('/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.CognitiveServices/accounts/none', subscription().subscriptionId, resourceGroup().name), parameters('openAiResourceId')), '/')]"
   },
   "resources": [
     {
@@ -441,7 +471,7 @@
                 "cpu": "[json(parameters('containerCpu'))]",
                 "memory": "[parameters('containerMemory')]"
               },
-              "env": "[concat(createArray(createObject('name', 'AZURE_CLIENT_ID', 'value', reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('baseName'))), '2023-01-31').clientId), createObject('name', 'AZ_SCOUT_DATA_DIR', 'value', if(parameters('enablePersistentStorage'), '/app/data', ''))), if(parameters('enableObo'), createArray(createObject('name', 'AZ_SCOUT_CLIENT_ID', 'value', parameters('oboClientId')), createObject('name', 'AZ_SCOUT_CLIENT_SECRET', 'secretRef', 'obo-client-secret'), createObject('name', 'AZ_SCOUT_TENANT_ID', 'value', parameters('oboTenantId'))), createArray()))]",
+              "env": "[concat(createArray(createObject('name', 'AZURE_CLIENT_ID', 'value', reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('baseName'))), '2023-01-31').clientId), createObject('name', 'AZ_SCOUT_DATA_DIR', 'value', if(parameters('enablePersistentStorage'), '/app/data', ''))), if(parameters('enableObo'), createArray(createObject('name', 'AZ_SCOUT_CLIENT_ID', 'value', parameters('oboClientId')), createObject('name', 'AZ_SCOUT_CLIENT_SECRET', 'secretRef', 'obo-client-secret'), createObject('name', 'AZ_SCOUT_TENANT_ID', 'value', parameters('oboTenantId'))), createArray()), if(variables('enableAiChat'), createArray(createObject('name', 'AZURE_OPENAI_ENDPOINT', 'value', parameters('openAiEndpoint')), createObject('name', 'AZURE_OPENAI_DEPLOYMENT', 'value', parameters('openAiDeployment'))), createArray()))]",
               "volumeMounts": "[if(parameters('enablePersistentStorage'), createArray(createObject('volumeName', 'app-data', 'mountPath', '/app/data')), createArray())]"
             }
           ],
@@ -635,6 +665,82 @@
       "metadata": {
         "description": "Assign Virtual Machine Contributor for Spot Placement Scores on each target subscription."
       }
+    },
+    {
+      "condition": "[not(empty(parameters('openAiResourceId')))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "openai-role",
+      "subscriptionId": "[variables('openAiResourceIdParts')[2]]",
+      "resourceGroup": "[variables('openAiResourceIdParts')[4]]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "accountName": {
+            "value": "[last(variables('openAiResourceIdParts'))]"
+          },
+          "principalId": {
+            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('baseName'))), '2023-01-31').principalId]"
+          },
+          "roleDefinitionId": {
+            "value": "[parameters('openAiRoleDefinitionId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.41.2.15936",
+              "templateHash": "3459860747353221395"
+            }
+          },
+          "parameters": {
+            "accountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the existing Cognitive Services / AI Services account."
+              }
+            },
+            "principalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Principal ID of the managed identity."
+              }
+            },
+            "roleDefinitionId": {
+              "type": "string",
+              "defaultValue": "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd",
+              "metadata": {
+                "description": "Role definition ID to assign (Cognitive Services OpenAI User by default)."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName')), parameters('principalId'), parameters('roleDefinitionId'))]",
+              "properties": {
+                "principalId": "[parameters('principalId')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('roleDefinitionId'))]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-identity', parameters('baseName')))]"
+      ],
+      "metadata": {
+        "description": "Grant the managed identity a data-plane role on the AI Services account for keyless AI chat."
+      }
     }
   ],
   "outputs": {
@@ -679,6 +785,13 @@
         "description": "Virtual Network ID (when VNet integration is enabled)."
       },
       "value": "[if(parameters('enableVnet'), resourceId('Microsoft.Network/virtualNetworks', format('{0}-vnet', parameters('baseName'))), '')]"
+    },
+    "aiChatEnabled": {
+      "type": "bool",
+      "metadata": {
+        "description": "Whether the AI chat is configured (keyless Azure OpenAI)."
+      },
+      "value": "[variables('enableAiChat')]"
     }
   }
 }

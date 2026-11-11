@@ -24,9 +24,9 @@ class TestIsChatEnabled:
 
     def test_disabled_when_env_vars_missing(self):
         with (
-            patch("az_scout.services.ai_chat.AZURE_OPENAI_ENDPOINT", ""),
-            patch("az_scout.services.ai_chat.AZURE_OPENAI_API_KEY", ""),
-            patch("az_scout.services.ai_chat.AZURE_OPENAI_DEPLOYMENT", ""),
+            patch("az_scout.services.ai_chat._config.AZURE_OPENAI_ENDPOINT", ""),
+            patch("az_scout.services.ai_chat._config.AZURE_OPENAI_API_KEY", ""),
+            patch("az_scout.services.ai_chat._config.AZURE_OPENAI_DEPLOYMENT", ""),
         ):
             assert is_chat_enabled() is False
 

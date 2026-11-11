@@ -33,7 +33,7 @@ All from a single web UI — or through an MCP-powered AI agent connected to you
 | Python | ≥ 3.11 |
 | Azure credentials | Any method supported by `DefaultAzureCredential` (`az login`, managed identity, …) |
 | RBAC | **Reader** on the subscriptions you want to query, **Virtual Machine Contributor** on the subscriptions for Spot Placement Scores retrieval |
-| Azure OpenAI *(optional)* | For the AI Chat Assistant: set `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT`, and optionally `AZURE_OPENAI_API_VERSION` |
+| Azure OpenAI *(optional)* | For the AI Chat Assistant: set `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_DEPLOYMENT` (optionally `AZURE_OPENAI_API_VERSION`). `AZURE_OPENAI_API_KEY` is optional — without it, keyless Microsoft Entra ID auth is used (the identity needs **Cognitive Services OpenAI User**, or **Azure AI User** for Foundry, on the AI resource) |
 
 ### Run locally with `uv` tool (recommended)
 

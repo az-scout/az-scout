@@ -369,12 +369,16 @@ class ChatRequest(BaseModel):
 async def chat(body: ChatRequest) -> StreamingResponse:
     """Stream AI chat completions with tool-calling support.
 
-    Requires ``AZURE_OPENAI_ENDPOINT``, ``AZURE_OPENAI_API_KEY``, and
-    ``AZURE_OPENAI_DEPLOYMENT`` environment variables.
+    Requires ``AZURE_OPENAI_ENDPOINT`` and ``AZURE_OPENAI_DEPLOYMENT``.
+    ``AZURE_OPENAI_API_KEY`` is optional: without it, Microsoft Entra ID
+    (keyless) auth is used with the app's managed identity / Azure CLI login.
     """
     if not is_chat_enabled():
         return JSONResponse(  # type: ignore[return-value]
-            {"error": "AI chat is not configured. Set AZURE_OPENAI_* environment variables."},
+            {
+                "error": "AI chat is not configured. Set AZURE_OPENAI_ENDPOINT and "
+                "AZURE_OPENAI_DEPLOYMENT (AZURE_OPENAI_API_KEY is optional)."
+            },
             status_code=503,
         )
 
@@ -415,7 +419,10 @@ class CompleteRequest(BaseModel):
     "/api/ai/complete",
     tags=["AI Chat"],
     summary="Non-streaming AI completion with tool calling",
-    responses={503: {"description": "AI chat not configured"}},
+    responses={
+        502: {"description": "Azure OpenAI authentication failed"},
+        503: {"description": "AI chat not configured"},
+    },
     dependencies=[Depends(require_auth)],
 )
 async def ai_complete_endpoint(body: CompleteRequest) -> JSONResponse:
@@ -427,21 +434,27 @@ async def ai_complete_endpoint(body: CompleteRequest) -> JSONResponse:
     """
     if not is_chat_enabled():
         return JSONResponse(
-            {"error": "AI chat is not configured. Set AZURE_OPENAI_* environment variables."},
+            {
+                "error": "AI chat is not configured. Set AZURE_OPENAI_ENDPOINT and "
+                "AZURE_OPENAI_DEPLOYMENT (AZURE_OPENAI_API_KEY is optional)."
+            },
             status_code=503,
         )
 
-    from az_scout.services.ai_chat import ai_complete
+    from az_scout.services.ai_chat import AzureOpenAIAuthError, ai_complete
 
-    result = await ai_complete(
-        body.prompt,
-        system_prompt=body.system_prompt,
-        tenant_id=body.tenant_id,
-        region=body.region,
-        subscription_id=body.subscription_id,
-        tools=body.tools,
-        cache_ttl=body.cache_ttl,
-    )
+    try:
+        result = await ai_complete(
+            body.prompt,
+            system_prompt=body.system_prompt,
+            tenant_id=body.tenant_id,
+            region=body.region,
+            subscription_id=body.subscription_id,
+            tools=body.tools,
+            cache_ttl=body.cache_ttl,
+        )
+    except AzureOpenAIAuthError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=502)
     return JSONResponse(
         {
             "content": result.content,

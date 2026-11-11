@@ -7,6 +7,11 @@ This project uses [Calendar Versioning](https://calver.org/) (`YYYY.MM.MICRO`).
 
 ## Unreleased
 
+### Added
+
+- **Keyless (Microsoft Entra ID) auth for the AI chat** ([#200](https://github.com/az-scout/az-scout/issues/200)) – the AI chat (web chat, `az-scout chat`, `plugin_ai_complete`) can now authenticate to Azure OpenAI / Foundry with a bearer token from `DefaultAzureCredential` (scope `https://cognitiveservices.azure.com/.default`) instead of an API key, so it works on resources with `disableLocalAuth = true`. `AZURE_OPENAI_API_KEY` is now optional: when set it is used as before; when unset, the app identity (managed identity via `AZURE_CLIENT_ID` on ACA, `az login` locally) is used. Chat is enabled as soon as `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_DEPLOYMENT` are set. An optional `AZURE_OPENAI_AUTH_MODE=auto|key|entra` forces a mode. Tokens are cached and refreshed before expiry, headers are rebuilt per request, AI calls always use the app identity (never the OBO user token), and `401`/`403` responses surface an actionable hint about the **Cognitive Services OpenAI User** role. `/api/ai/complete` returns `502` on Azure OpenAI auth failures.
+- **ACA template: optional keyless AI chat wiring** ([#200](https://github.com/az-scout/az-scout/issues/200)) – `deploy/main.bicep` gains optional `openAiEndpoint` / `openAiDeployment` parameters that set `AZURE_OPENAI_ENDPOINT` / `AZURE_OPENAI_DEPLOYMENT` on the container app (no API key), and an optional `openAiResourceId` that grants the managed identity **Cognitive Services OpenAI User** (overridable via `openAiRoleDefinitionId`) on the AI Services account through the new `modules/openai-role.bicep`, including cross-subscription. Exposed in the portal UI (new **AI Chat** step) and `main.example.bicepparam`; `main.json` regenerated; new `aiChatEnabled` output.
+
 ## [2026.8.2] - 2026-08-11
 
 ### Changed
