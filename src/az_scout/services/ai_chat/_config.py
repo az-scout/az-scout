@@ -34,8 +34,8 @@ COGNITIVE_SERVICES_SCOPE = "https://cognitiveservices.azure.com/.default"
 
 _VALID_AUTH_MODES = ("auto", "key", "entra")
 
-# Entra token cache: (token_str, expires_on_epoch)
-_openai_token: tuple[str, float] | None = None
+# Entra token cache: scope → (token_str, expires_on_epoch)
+_openai_token_cache: dict[str, tuple[str, float]] = {}
 _openai_token_lock = threading.Lock()
 _TOKEN_REFRESH_MARGIN = 120  # refresh 2 min before expiry
 
@@ -69,14 +69,13 @@ def is_chat_enabled() -> bool:
 
 def _get_entra_token() -> str:
     """Return a cached Entra ID token for Azure OpenAI (blocking)."""
-    global _openai_token
-
     # Imported lazily via the module so test patches of ``_auth.credential`` apply.
     from az_scout.azure_api import _auth
 
     with _openai_token_lock:
-        if _openai_token is not None:
-            token_str, expires_on = _openai_token
+        cached = _openai_token_cache.get(COGNITIVE_SERVICES_SCOPE)
+        if cached is not None:
+            token_str, expires_on = cached
             if time.time() < expires_on - _TOKEN_REFRESH_MARGIN:
                 return token_str
 
@@ -91,16 +90,15 @@ def _get_entra_token() -> str:
                 "AZURE_OPENAI_API_KEY."
             ) from exc
         token_str = str(token.token)
-        _openai_token = (token_str, float(token.expires_on))
+        _openai_token_cache[COGNITIVE_SERVICES_SCOPE] = (token_str, float(token.expires_on))
         logger.debug("Azure OpenAI token acquired (expires_on=%d)", token.expires_on)
         return token_str
 
 
 def clear_token_cache() -> None:
     """Drop the cached Azure OpenAI Entra token (used by tests)."""
-    global _openai_token
     with _openai_token_lock:
-        _openai_token = None
+        _openai_token_cache.clear()
 
 
 async def get_openai_auth_headers() -> dict[str, str]:

@@ -453,8 +453,20 @@ async def ai_complete_endpoint(body: CompleteRequest) -> JSONResponse:
             tools=body.tools,
             cache_ttl=body.cache_ttl,
         )
-    except AzureOpenAIAuthError as exc:
-        return JSONResponse({"error": str(exc)}, status_code=502)
+    except AzureOpenAIAuthError:
+        # Details (incl. the upstream response) are logged server-side only.
+        logger.exception("Azure OpenAI authentication failed")
+        return JSONResponse(
+            {
+                "error": (
+                    "Azure OpenAI authentication failed. Check that the app identity "
+                    "has the 'Cognitive Services OpenAI User' role on the AI resource "
+                    "and that AZURE_CLIENT_ID is correct, or check AZURE_OPENAI_API_KEY. "
+                    "See server logs for details."
+                )
+            },
+            status_code=502,
+        )
     return JSONResponse(
         {
             "content": result.content,
