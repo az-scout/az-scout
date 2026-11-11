@@ -16,11 +16,11 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from az_scout.services.ai_chat import _config
 from az_scout.services.ai_chat._config import (
-    AZURE_OPENAI_API_KEY,
-    AZURE_OPENAI_API_VERSION,
-    AZURE_OPENAI_DEPLOYMENT,
-    AZURE_OPENAI_ENDPOINT,
+    AzureOpenAIAuthError,
+    describe_auth_failure,
+    get_openai_auth_headers,
 )
 from az_scout.services.ai_chat._dispatch import (
     _execute_tool,
@@ -139,14 +139,10 @@ async def ai_complete(
     messages.append({"role": "user", "content": prompt})
 
     url = (
-        f"{AZURE_OPENAI_ENDPOINT.rstrip('/')}/openai/deployments/"
-        f"{AZURE_OPENAI_DEPLOYMENT}/chat/completions"
-        f"?api-version={AZURE_OPENAI_API_VERSION}"
+        f"{_config.AZURE_OPENAI_ENDPOINT.rstrip('/')}/openai/deployments/"
+        f"{_config.AZURE_OPENAI_DEPLOYMENT}/chat/completions"
+        f"?api-version={_config.AZURE_OPENAI_API_VERSION}"
     )
-    headers = {
-        "Content-Type": "application/json",
-        "api-key": AZURE_OPENAI_API_KEY,
-    }
 
     tool_log: list[dict[str, Any]] = []
 
@@ -160,7 +156,13 @@ async def ai_complete(
             # Retry loop for 429 rate-limit errors
             resp_data: dict[str, Any] | None = None
             for _attempt in range(_MAX_RETRIES):
+                # Rebuilt per request so expiring Entra tokens get refreshed
+                headers = await get_openai_auth_headers()
                 resp = await client.post(url, json=body, headers=headers)
+                auth_error = describe_auth_failure(resp.status_code, resp.text)
+                if auth_error:
+                    logger.error("%s", auth_error)
+                    raise AzureOpenAIAuthError(auth_error)
                 if resp.status_code == 429:
                     retry_after = _DEFAULT_RETRY_WAIT
                     if resp.headers.get("retry-after"):

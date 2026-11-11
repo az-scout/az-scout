@@ -734,8 +734,9 @@ async def run_cli_chat(initial_prompt: str | None = None) -> None:
                 "[bold red]Azure OpenAI is not configured.[/bold red]\n\n"
                 "Set these environment variables:\n"
                 "  • AZURE_OPENAI_ENDPOINT\n"
-                "  • AZURE_OPENAI_API_KEY\n"
-                "  • AZURE_OPENAI_DEPLOYMENT",
+                "  • AZURE_OPENAI_DEPLOYMENT\n"
+                "  • AZURE_OPENAI_API_KEY [dim](optional — without it, Microsoft "
+                "Entra ID auth is used via `az login` / managed identity)[/dim]",
                 title="[bold red]Configuration Error[/bold red]",
                 border_style="red",
             )

@@ -103,7 +103,11 @@ class AzScoutPromptContributor(Protocol):
 
 
 def is_ai_enabled() -> bool:
-    """Return True if AI chat/completion is configured and available."""
+    """Return True if AI chat/completion is configured and available.
+
+    Requires ``AZURE_OPENAI_ENDPOINT`` and ``AZURE_OPENAI_DEPLOYMENT``.
+    ``AZURE_OPENAI_API_KEY`` is optional (Microsoft Entra ID auth otherwise).
+    """
     from az_scout.services.ai_chat._config import is_chat_enabled
 
     return is_chat_enabled()

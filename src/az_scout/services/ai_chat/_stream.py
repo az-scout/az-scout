@@ -9,11 +9,11 @@ import logging
 from collections.abc import AsyncGenerator
 from typing import Any
 
+from az_scout.services.ai_chat import _config
 from az_scout.services.ai_chat._config import (
-    AZURE_OPENAI_API_KEY,
-    AZURE_OPENAI_API_VERSION,
-    AZURE_OPENAI_DEPLOYMENT,
-    AZURE_OPENAI_ENDPOINT,
+    AzureOpenAIAuthError,
+    describe_auth_failure,
+    get_openai_auth_headers,
 )
 from az_scout.services.ai_chat._dispatch import (
     _execute_tool,
@@ -68,14 +68,10 @@ async def chat_stream(
     ]
 
     url = (
-        f"{AZURE_OPENAI_ENDPOINT.rstrip('/')}/openai/deployments/"
-        f"{AZURE_OPENAI_DEPLOYMENT}/chat/completions"
-        f"?api-version={AZURE_OPENAI_API_VERSION}"
+        f"{_config.AZURE_OPENAI_ENDPOINT.rstrip('/')}/openai/deployments/"
+        f"{_config.AZURE_OPENAI_DEPLOYMENT}/chat/completions"
+        f"?api-version={_config.AZURE_OPENAI_API_VERSION}"
     )
-    headers = {
-        "Content-Type": "application/json",
-        "api-key": AZURE_OPENAI_API_KEY,
-    }
 
     async with httpx.AsyncClient(timeout=120.0) as client:
         for _round in range(_MAX_TOOL_ROUNDS):
@@ -90,6 +86,8 @@ async def chat_stream(
                 # Retry loop for 429 rate-limit errors
                 resp_ctx = None
                 for _attempt in range(_MAX_RETRIES):
+                    # Rebuilt per request so expiring Entra tokens get refreshed
+                    headers = await get_openai_auth_headers()
                     resp_ctx = client.stream(
                         "POST",
                         url,
@@ -126,7 +124,11 @@ async def chat_stream(
                     elif resp.status_code != 200:
                         error_body = await resp.aread()
                         await resp_ctx.__aexit__(None, None, None)
-                        yield _sse({"type": "error", "content": error_body.decode()})
+                        error_text = error_body.decode(errors="replace")
+                        auth_error = describe_auth_failure(resp.status_code, error_text)
+                        if auth_error:
+                            logger.error("%s", auth_error)
+                        yield _sse({"type": "error", "content": auth_error or error_text})
                         yield _sse({"type": "done"})
                         return
                     else:
@@ -181,6 +183,11 @@ async def chat_stream(
                 finally:
                     await resp_ctx.__aexit__(None, None, None)
 
+            except AzureOpenAIAuthError as exc:
+                logger.error("%s", exc)
+                yield _sse({"type": "error", "content": str(exc)})
+                yield _sse({"type": "done"})
+                return
             except httpx.HTTPError as exc:
                 yield _sse({"type": "error", "content": f"HTTP error: {exc}"})
                 yield _sse({"type": "done"})

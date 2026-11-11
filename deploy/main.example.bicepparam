@@ -54,3 +54,10 @@ param readerSubscriptionIds = [
 // param oboClientId = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 // param oboClientSecret = '<obo-client-secret>'
 // param oboTenantId = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+
+// Optional: enable the AI chat with keyless (Microsoft Entra ID) Azure OpenAI auth.
+// No API key is stored — the managed identity authenticates. Setting openAiResourceId
+// grants it 'Cognitive Services OpenAI User' on the AI Services account.
+// param openAiEndpoint = 'https://<account>.services.ai.azure.com'
+// param openAiDeployment = 'gpt-4o'
+// param openAiResourceId = '/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<account>'

@@ -96,10 +96,31 @@ An optional chat panel powered by **Azure OpenAI** with streaming responses, too
 
 | Variable | Description |
 |----------|-------------|
-| `AZURE_OPENAI_ENDPOINT` | Your Azure OpenAI endpoint URL |
-| `AZURE_OPENAI_API_KEY` | API key |
+| `AZURE_OPENAI_ENDPOINT` | Your Azure OpenAI / Foundry endpoint URL |
 | `AZURE_OPENAI_DEPLOYMENT` | Deployment name (e.g. `gpt-4o`) |
+| `AZURE_OPENAI_API_KEY` *(optional)* | API key. When unset, keyless Microsoft Entra ID auth is used |
+| `AZURE_OPENAI_AUTH_MODE` *(optional)* | `auto` (default: key if set, Entra ID otherwise), `key`, or `entra` |
 | `AZURE_OPENAI_API_VERSION` *(optional)* | API version (default: `2024-10-21`) |
+
+**Keyless (Microsoft Entra ID) authentication** — recommended, and required when the AI
+resource has local auth disabled (`disableLocalAuth = true`). Leave `AZURE_OPENAI_API_KEY`
+unset and az-scout requests a token for `https://cognitiveservices.azure.com/.default` with
+`DefaultAzureCredential`:
+
+- **Locally**, `az login` is used.
+- **On Azure Container Apps / App Service**, the user-assigned managed identity selected by
+  `AZURE_CLIENT_ID` is used (the [ACA template](deployment/aca.md) already sets it).
+- The identity needs the **Cognitive Services OpenAI User** role (or **Azure AI User** for
+  Foundry) on the AI resource.
+- AI calls always use the **app** identity, even when [OBO](deployment/obo-auth.md) is enabled
+  for ARM calls.
+
+```bash
+az role assignment create \
+  --assignee <principal-id> \
+  --role "Cognitive Services OpenAI User" \
+  --scope <ai-resource-id>
+```
 
 The assistant has access to all az-scout MCP tools and can answer questions like:
 *"Which VM SKU gives me the best confidence score in West Europe with 4 vCPUs?"*

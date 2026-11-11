@@ -5,8 +5,12 @@ about Azure infrastructure, calling az-scout tool functions when needed.
 
 Requires environment variables:
     AZURE_OPENAI_ENDPOINT    – e.g. https://my-resource.openai.azure.com
-    AZURE_OPENAI_API_KEY     – API key for the Azure OpenAI resource
     AZURE_OPENAI_DEPLOYMENT  – deployment name (e.g. gpt-4o)
+
+Optional:
+    AZURE_OPENAI_API_KEY     – API key; when unset, Microsoft Entra ID (keyless)
+                               auth is used via DefaultAzureCredential
+    AZURE_OPENAI_AUTH_MODE   – ``auto`` (default), ``key`` or ``entra``
 """
 
 from __future__ import annotations
@@ -24,6 +28,15 @@ from az_scout.services.ai_chat._config import (
 )
 from az_scout.services.ai_chat._config import (
     AZURE_OPENAI_ENDPOINT as AZURE_OPENAI_ENDPOINT,
+)
+from az_scout.services.ai_chat._config import (
+    AzureOpenAIAuthError as AzureOpenAIAuthError,
+)
+from az_scout.services.ai_chat._config import (
+    get_openai_auth_headers as get_openai_auth_headers,
+)
+from az_scout.services.ai_chat._config import (
+    is_chat_enabled as is_chat_enabled,
 )
 from az_scout.services.ai_chat._dispatch import (
     _post_process_tool_result as _post_process_tool_result,
@@ -50,8 +63,3 @@ from az_scout.services.ai_chat._tools import (
 from az_scout.services.ai_chat._tools import (
     refresh_tool_definitions as refresh_tool_definitions,
 )
-
-
-def is_chat_enabled() -> bool:
-    """Return True if all required Azure OpenAI env vars are set."""
-    return bool(AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY and AZURE_OPENAI_DEPLOYMENT)

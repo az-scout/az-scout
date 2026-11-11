@@ -13,7 +13,7 @@ This guide covers everything you need to install and run az-scout.
 | **Python** | ≥ 3.11 |
 | **Azure credentials** | Any method supported by `DefaultAzureCredential` (`az login`, managed identity, environment variables, …) |
 | **RBAC** | **Reader** on the subscriptions you want to query; **Virtual Machine Contributor** for Spot Placement Scores |
-| **Azure OpenAI** *(optional)* | For the AI Chat Assistant — set `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT`, and optionally `AZURE_OPENAI_API_VERSION` |
+| **Azure OpenAI** *(optional)* | For the AI Chat Assistant — set `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_DEPLOYMENT` (optionally `AZURE_OPENAI_API_VERSION`). `AZURE_OPENAI_API_KEY` is optional: without it, keyless Microsoft Entra ID auth is used — see [AI Chat Assistant](features.md#ai-chat-assistant) |
 
 ---
 

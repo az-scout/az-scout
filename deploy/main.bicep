@@ -10,6 +10,8 @@
 //   5. (Optional) VNet integration with network-isolated storage
 //   6. (Optional) Entra ID EasyAuth via authConfigs
 //   7. (Optional) OBO authentication for multi-user delegated access
+//   8. (Optional) Keyless AI chat: Azure OpenAI env vars + data-plane role
+//      assignment for the managed identity on the AI Services account
 //
 // Usage:
 //   az deployment group create \
@@ -33,6 +35,15 @@
 //     -p enableObo=true \
 //     -p oboClientId=<obo-client-id> \
 //     -p oboClientSecret=<obo-client-secret>
+//
+// With keyless AI chat (Microsoft Entra ID, no API key):
+//   az deployment group create \
+//     -g <resource-group> \
+//     -f deploy/main.bicep \
+//     -p readerSubscriptionIds='["<sub-id-1>"]' \
+//     -p openAiEndpoint=https://<account>.services.ai.azure.com \
+//     -p openAiDeployment=<deployment-name> \
+//     -p openAiResourceId=<ai-services-account-resource-id>
 // ---------------------------------------------------------------------------
 
 @description('Azure region for all resources.')
@@ -118,6 +129,20 @@ param oboClientSecret string = ''
 @description('OBO App Registration home tenant ID. Defaults to the deployment tenant.')
 param oboTenantId string = tenant().tenantId
 
+// -- AI chat (Azure OpenAI, keyless) parameters --
+
+@description('Azure OpenAI / Foundry endpoint for the AI chat (e.g. "https://<account>.services.ai.azure.com"). Leave empty to disable the AI chat. No API key is configured: the managed identity authenticates with Microsoft Entra ID.')
+param openAiEndpoint string = ''
+
+@description('Azure OpenAI model deployment name used by the AI chat (e.g. "gpt-4o"). Required together with openAiEndpoint.')
+param openAiDeployment string = ''
+
+@description('Resource ID of the Azure OpenAI / AI Services account. When set, the managed identity is granted the role in openAiRoleDefinitionId on it. Leave empty to assign the role yourself.')
+param openAiResourceId string = ''
+
+@description('Role definition ID granted on openAiResourceId. Defaults to "Cognitive Services OpenAI User"; override with the "Azure AI User" role ID for Foundry projects if required.')
+param openAiRoleDefinitionId string = '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
+
 // ---------------------------------------------------------------------------
 // Managed Identity
 // ---------------------------------------------------------------------------
@@ -160,6 +185,29 @@ module spotScoreRole 'modules/subscription-spot-score.bicep' = [
     }
   }
 ]
+
+// ---------------------------------------------------------------------------
+// AI chat – data-plane role on the Azure OpenAI / AI Services account (optional)
+// ---------------------------------------------------------------------------
+
+var enableAiChat = !empty(openAiEndpoint) && !empty(openAiDeployment)
+
+// /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.CognitiveServices/accounts/{name}
+// Guarded so the (skipped) module scope stays valid when no resource ID is given.
+var openAiResourceIdParts = split(empty(openAiResourceId)
+  ? '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().name}/providers/Microsoft.CognitiveServices/accounts/none'
+  : openAiResourceId, '/')
+
+@description('Grant the managed identity a data-plane role on the AI Services account for keyless AI chat.')
+module openAiRole 'modules/openai-role.bicep' = if (!empty(openAiResourceId)) {
+  name: 'openai-role'
+  scope: resourceGroup(openAiResourceIdParts[2], openAiResourceIdParts[4])
+  params: {
+    accountName: last(openAiResourceIdParts)
+    principalId: managedIdentity.properties.principalId
+    roleDefinitionId: openAiRoleDefinitionId
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Log Analytics + Container Apps Environment
@@ -435,6 +483,18 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
                 name: 'AZ_SCOUT_TENANT_ID'
                 value: oboTenantId
               }
+            ] : [],
+            // AI chat – keyless: no AZURE_OPENAI_API_KEY, the app uses the
+            // managed identity (AZURE_CLIENT_ID) with Microsoft Entra ID.
+            enableAiChat ? [
+              {
+                name: 'AZURE_OPENAI_ENDPOINT'
+                value: openAiEndpoint
+              }
+              {
+                name: 'AZURE_OPENAI_DEPLOYMENT'
+                value: openAiDeployment
+              }
             ] : []
           )
           volumeMounts: enablePersistentStorage ? [
@@ -524,3 +584,6 @@ output logAnalyticsId string = logAnalytics.id
 
 @description('Virtual Network ID (when VNet integration is enabled).')
 output vnetId string = enableVnet ? vnet.id : ''
+
+@description('Whether the AI chat is configured (keyless Azure OpenAI).')
+output aiChatEnabled bool = enableAiChat
